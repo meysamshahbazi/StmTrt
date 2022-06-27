@@ -592,8 +592,6 @@ class Inception3_Q(nn.Module):
 
 
 class AdjustLayer(nn.Module):
-    
-
     def __init__(self):
         super(AdjustLayer, self).__init__()
         self.default_hyper_params = dict(

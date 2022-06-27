@@ -1,3 +1,5 @@
+# adaptaed from video analysis
+
 import cv2
 import matplotlib
 import matplotlib.pyplot as plt
