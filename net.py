@@ -75,82 +75,9 @@ class conv_bn_relu(nn.Module):
             x = self.relu(x)
         return x
 
-class ModuleBase(nn.Module):
-    r"""
-    Module/component base class
-    """
-    # Define your default hyper-parameters here in your sub-class.
-    default_hyper_params = dict(pretrain_model_path="snapshots/stmtrack-googlenet-fulldata-train/epoch-19.pkl")
-
-    def __init__(self):
-        super(ModuleBase, self).__init__()
-        self._hyper_params = deepcopy(self.default_hyper_params)
-
-    def get_hps(self) -> dict():
-        r"""
-        Getter function for hyper-parameters
-
-        Returns
-        -------
-        dict
-            hyper-parameters
-        """
-        return self._hyper_params
-
-    def set_hps(self, hps: dict()) -> None:
-        r"""
-        Set hyper-parameters
-
-        Arguments
-        ---------
-        hps: dict
-            dict of hyper-parameters, the keys must in self.__hyper_params__
-        """
-        for key in hps:
-            if key not in self._hyper_params:
-                raise KeyError
-            self._hyper_params[key] = hps[key]
-
-    def update_params(self):
-        model_file = self._hyper_params.get("pretrain_model_path", "")
-#         model_file = "snapshots/stmtrack-googlenet-fulldata-train/epoch-19.pkl"
-        if model_file != "":
-            state_dict = torch.load(model_file,
-                                    map_location=torch.device("cpu"))
-            if "model_state_dict" in state_dict:
-                state_dict = state_dict["model_state_dict"]
-            self.load_model_param(state_dict)
-            logger.info(
-                "Load pretrained {} parameters from: {} whose md5sum is {}".
-                format(self.__class__.__name__, model_file, md5sum(model_file)))
-
-    def load_model_param(self, checkpoint_state_dict):
-        model_state_dict = self.state_dict()
-        for k in list(checkpoint_state_dict.keys()):
-            if k in model_state_dict:
-                shape_model = tuple(model_state_dict[k].shape)
-                shape_checkpoint = tuple(checkpoint_state_dict[k].shape)
-                if shape_model != shape_checkpoint:
-                    logger.warning(
-                        "'{}' has shape {} in the checkpoint but {} in the "
-                        "model! Skipped.".format(k, shape_checkpoint,
-                                                 shape_model))
-                    checkpoint_state_dict.pop(k)
-        # pyre-ignore
-        incompatible = self.load_state_dict(checkpoint_state_dict, strict=False)
-        if incompatible.missing_keys:
-            missing_keys = filter_reused_missing_keys(self,
-                                                      incompatible.missing_keys)
-            if missing_keys:
-                logger.warning(get_missing_parameters_message(missing_keys))
-        if incompatible.unexpected_keys:
-            logger.warning(
-                get_unexpected_parameters_message(incompatible.unexpected_keys))
-
-                
 
 
-class Inception3_M(ModuleBase):
+class Inception3_M(nn.Module):
     r"""
     GoogLeNet
 
@@ -164,14 +91,15 @@ class Inception3_M(ModuleBase):
     pruned: bool
         if using pruned backbone for SOT
     """
-    default_hyper_params = dict(
-        pretrain_model_path="",
-        crop_pad=4,
-        pruned=True,
-    )
+    
 
     def __init__(self, transform_input=False):
         super(Inception3_M, self).__init__()
+        self.default_hyper_params = dict(
+        pretrain_model_path="",
+        crop_pad=4,
+        pruned=True,
+        )
         self.Conv2d_1a_3x3 = BasicConv2d(3, 32, kernel_size=3, stride=2)
         self.Conv2d_2a_3x3 = BasicConv2d(32, 32, kernel_size=3)
         self.Conv2d_2b_3x3 = BasicConv2d(32, 64, kernel_size=3, padding=1)
@@ -284,9 +212,9 @@ class Inception3_M(ModuleBase):
         # return x
 
     def update_params(self):
-        super().update_params()
-        self.crop_pad = self._hyper_params['crop_pad']
-        self.pruned = self._hyper_params['pruned']
+        # super().update_params()
+        self.crop_pad = self.default_hyper_params['crop_pad']
+        self.pruned = self.default_hyper_params['pruned']
 
 
 class InceptionA(nn.Module):
@@ -524,7 +452,7 @@ class BasicConv2d(nn.Module):
 
 
 
-class Inception3_Q(ModuleBase):
+class Inception3_Q(nn.Module):
     r"""
     GoogLeNet
 
@@ -538,14 +466,15 @@ class Inception3_Q(ModuleBase):
     pruned: bool
         if using pruned backbone for SOT
     """
-    default_hyper_params = dict(
-        pretrain_model_path="",
-        crop_pad=4,
-        pruned=True,
-    )
+    
 
     def __init__(self, transform_input=False):
         super(Inception3_Q, self).__init__()
+        self.default_hyper_params = dict(
+        pretrain_model_path="",
+        crop_pad=4,
+        pruned=True,
+        )
         self.Conv2d_1a_3x3 = BasicConv2d(3, 32, kernel_size=3, stride=2)
         self.Conv2d_2a_3x3 = BasicConv2d(32, 32, kernel_size=3)
         self.Conv2d_2b_3x3 = BasicConv2d(32, 64, kernel_size=3, padding=1)
@@ -655,262 +584,30 @@ class Inception3_Q(ModuleBase):
         # return x
 
     def update_params(self):
-        super().update_params()
-        self.crop_pad = self._hyper_params['crop_pad']
-        self.pruned = self._hyper_params['pruned']
-
-
-class InceptionA(nn.Module):
-    def __init__(self, in_channels, pool_features):
-        super(InceptionA, self).__init__()
-        self.branch1x1 = BasicConv2d(in_channels, 64, kernel_size=1)
-
-        self.branch5x5_1 = BasicConv2d(in_channels, 48, kernel_size=1)
-        self.branch5x5_2 = BasicConv2d(48, 64, kernel_size=5, padding=2)
-
-        self.branch3x3dbl_1 = BasicConv2d(in_channels, 64, kernel_size=1)
-        self.branch3x3dbl_2 = BasicConv2d(64, 96, kernel_size=3, padding=1)
-        self.branch3x3dbl_3 = BasicConv2d(96, 96, kernel_size=3, padding=1)
-
-        self.branch_pool = BasicConv2d(in_channels,
-                                       pool_features,
-                                       kernel_size=1)
-
-    def forward(self, x):
-        branch1x1 = self.branch1x1(x)
-
-        branch5x5 = self.branch5x5_1(x)
-        branch5x5 = self.branch5x5_2(branch5x5)
-
-        branch3x3dbl = self.branch3x3dbl_1(x)
-        branch3x3dbl = self.branch3x3dbl_2(branch3x3dbl)
-        branch3x3dbl = self.branch3x3dbl_3(branch3x3dbl)
-
-        branch_pool = F.avg_pool2d(x, kernel_size=3, stride=1, padding=1)
-        branch_pool = self.branch_pool(branch_pool)
-
-        outputs = [branch1x1, branch5x5, branch3x3dbl, branch_pool]
-        return torch.cat(outputs, 1)
-
-
-class InceptionB(nn.Module):
-    def __init__(self, in_channels):
-        super(InceptionB, self).__init__()
-        self.branch3x3 = BasicConv2d(in_channels, 384, kernel_size=3, stride=2)
-
-        self.branch3x3dbl_1 = BasicConv2d(in_channels, 64, kernel_size=1)
-        self.branch3x3dbl_2 = BasicConv2d(64, 96, kernel_size=3, padding=1)
-        self.branch3x3dbl_3 = BasicConv2d(96, 96, kernel_size=3, stride=2)
-
-    def forward(self, x):
-        branch3x3 = self.branch3x3(x)
-
-        branch3x3dbl = self.branch3x3dbl_1(x)
-        branch3x3dbl = self.branch3x3dbl_2(branch3x3dbl)
-        branch3x3dbl = self.branch3x3dbl_3(branch3x3dbl)
-
-        branch_pool = F.max_pool2d(x, kernel_size=3, stride=2)
-
-        outputs = [branch3x3, branch3x3dbl, branch_pool]
-        return torch.cat(outputs, 1)
-
-
-class InceptionC(nn.Module):
-    def __init__(self, in_channels, channels_7x7):
-        super(InceptionC, self).__init__()
-        self.branch1x1 = BasicConv2d(in_channels, 192, kernel_size=1)
-
-        c7 = channels_7x7
-        self.branch7x7_1 = BasicConv2d(in_channels, c7, kernel_size=1)
-        self.branch7x7_2 = BasicConv2d(c7,
-                                       c7,
-                                       kernel_size=(1, 7),
-                                       padding=(0, 3))
-        self.branch7x7_3 = BasicConv2d(c7,
-                                       192,
-                                       kernel_size=(7, 1),
-                                       padding=(3, 0))
-
-        self.branch7x7dbl_1 = BasicConv2d(in_channels, c7, kernel_size=1)
-        self.branch7x7dbl_2 = BasicConv2d(c7,
-                                          c7,
-                                          kernel_size=(7, 1),
-                                          padding=(3, 0))
-        self.branch7x7dbl_3 = BasicConv2d(c7,
-                                          c7,
-                                          kernel_size=(1, 7),
-                                          padding=(0, 3))
-        self.branch7x7dbl_4 = BasicConv2d(c7,
-                                          c7,
-                                          kernel_size=(7, 1),
-                                          padding=(3, 0))
-        self.branch7x7dbl_5 = BasicConv2d(c7,
-                                          192,
-                                          kernel_size=(1, 7),
-                                          padding=(0, 3))
-
-        self.branch_pool = BasicConv2d(in_channels, 192, kernel_size=1)
-
-    def forward(self, x):
-        branch1x1 = self.branch1x1(x)
-
-        branch7x7 = self.branch7x7_1(x)
-        branch7x7 = self.branch7x7_2(branch7x7)
-        branch7x7 = self.branch7x7_3(branch7x7)
-
-        branch7x7dbl = self.branch7x7dbl_1(x)
-        branch7x7dbl = self.branch7x7dbl_2(branch7x7dbl)
-        branch7x7dbl = self.branch7x7dbl_3(branch7x7dbl)
-        branch7x7dbl = self.branch7x7dbl_4(branch7x7dbl)
-        branch7x7dbl = self.branch7x7dbl_5(branch7x7dbl)
-
-        branch_pool = F.avg_pool2d(x, kernel_size=3, stride=1, padding=1)
-        branch_pool = self.branch_pool(branch_pool)
-
-        outputs = [branch1x1, branch7x7, branch7x7dbl, branch_pool]
-        return torch.cat(outputs, 1)
-
-
-class InceptionD(nn.Module):
-    def __init__(self, in_channels):
-        super(InceptionD, self).__init__()
-        self.branch3x3_1 = BasicConv2d(in_channels, 192, kernel_size=1)
-        self.branch3x3_2 = BasicConv2d(192, 320, kernel_size=3, stride=2)
-
-        self.branch7x7x3_1 = BasicConv2d(in_channels, 192, kernel_size=1)
-        self.branch7x7x3_2 = BasicConv2d(192,
-                                         192,
-                                         kernel_size=(1, 7),
-                                         padding=(0, 3))
-        self.branch7x7x3_3 = BasicConv2d(192,
-                                         192,
-                                         kernel_size=(7, 1),
-                                         padding=(3, 0))
-        self.branch7x7x3_4 = BasicConv2d(192, 192, kernel_size=3, stride=2)
-
-    def forward(self, x):
-        branch3x3 = self.branch3x3_1(x)
-        branch3x3 = self.branch3x3_2(branch3x3)
-
-        branch7x7x3 = self.branch7x7x3_1(x)
-        branch7x7x3 = self.branch7x7x3_2(branch7x7x3)
-        branch7x7x3 = self.branch7x7x3_3(branch7x7x3)
-        branch7x7x3 = self.branch7x7x3_4(branch7x7x3)
-
-        branch_pool = F.max_pool2d(x, kernel_size=3, stride=2)
-        outputs = [branch3x3, branch7x7x3, branch_pool]
-        return torch.cat(outputs, 1)
-
-
-class InceptionE(nn.Module):
-    def __init__(self, in_channels):
-        super(InceptionE, self).__init__()
-        self.branch1x1 = BasicConv2d(in_channels, 320, kernel_size=1)
-
-        self.branch3x3_1 = BasicConv2d(in_channels, 384, kernel_size=1)
-        self.branch3x3_2a = BasicConv2d(384,
-                                        384,
-                                        kernel_size=(1, 3),
-                                        padding=(0, 1))
-        self.branch3x3_2b = BasicConv2d(384,
-                                        384,
-                                        kernel_size=(3, 1),
-                                        padding=(1, 0))
-
-        self.branch3x3dbl_1 = BasicConv2d(in_channels, 448, kernel_size=1)
-        self.branch3x3dbl_2 = BasicConv2d(448, 384, kernel_size=3, padding=1)
-        self.branch3x3dbl_3a = BasicConv2d(384,
-                                           384,
-                                           kernel_size=(1, 3),
-                                           padding=(0, 1))
-        self.branch3x3dbl_3b = BasicConv2d(384,
-                                           384,
-                                           kernel_size=(3, 1),
-                                           padding=(1, 0))
-
-        self.branch_pool = BasicConv2d(in_channels, 192, kernel_size=1)
-
-    def forward(self, x):
-        branch1x1 = self.branch1x1(x)
-
-        branch3x3 = self.branch3x3_1(x)
-        branch3x3 = [
-            self.branch3x3_2a(branch3x3),
-            self.branch3x3_2b(branch3x3),
-        ]
-        branch3x3 = torch.cat(branch3x3, 1)
-
-        branch3x3dbl = self.branch3x3dbl_1(x)
-        branch3x3dbl = self.branch3x3dbl_2(branch3x3dbl)
-        branch3x3dbl = [
-            self.branch3x3dbl_3a(branch3x3dbl),
-            self.branch3x3dbl_3b(branch3x3dbl),
-        ]
-        branch3x3dbl = torch.cat(branch3x3dbl, 1)
-
-        branch_pool = F.avg_pool2d(x, kernel_size=3, stride=1, padding=1)
-        branch_pool = self.branch_pool(branch_pool)
-
-        outputs = [branch1x1, branch3x3, branch3x3dbl, branch_pool]
-        return torch.cat(outputs, 1)
-
-
-class InceptionAux(nn.Module):
-    def __init__(self, in_channels, num_classes):
-        super(InceptionAux, self).__init__()
-        self.conv0 = BasicConv2d(in_channels, 128, kernel_size=1)
-        self.conv1 = BasicConv2d(128, 768, kernel_size=5)
-        self.conv1.stddev = 0.01
-        self.fc = nn.Linear(768, num_classes)
-        self.fc.stddev = 0.001
-
-    def forward(self, x):
-        # N x 768 x 17 x 17
-        x = F.avg_pool2d(x, kernel_size=5, stride=3)
-        # N x 768 x 5 x 5
-        x = self.conv0(x)
-        # N x 128 x 5 x 5
-        x = self.conv1(x)
-        # N x 768 x 1 x 1
-        # Adaptive average pooling
-        x = F.adaptive_avg_pool2d(x, (1, 1))
-        # N x 768 x 1 x 1
-        x = torch.flatten(x, 1)
-        # N x 768
-        x = self.fc(x)
-        # N x 1000
-        return x
-
-
-class BasicConv2d(nn.Module):
-    def __init__(self, in_channels, out_channels, **kwargs):
-        super(BasicConv2d, self).__init__()
-        self.conv = nn.Conv2d(in_channels, out_channels, bias=False, **kwargs)
-        self.bn = nn.BatchNorm2d(out_channels, eps=0.001)
-
-    def forward(self, x):
-        x = self.conv(x)
-        x = self.bn(x)
-        return F.relu(x, inplace=True)
+        # super().update_params()
+        self.crop_pad = self.default_hyper_params['crop_pad']
+        self.pruned = self.default_hyper_params['pruned']
 
 
 
-class AdjustLayer(ModuleBase):
-    default_hyper_params = dict(
-        in_channels=768,
-        out_channels=512,
-    )
+
+class AdjustLayer(nn.Module):
+    
 
     def __init__(self):
         super(AdjustLayer, self).__init__()
+        self.default_hyper_params = dict(
+        in_channels=768,
+        out_channels=512,
+        )
 
     def forward(self, x):
         return self.adjustor(x)
 
     def update_params(self):
-        super().update_params()
-        in_channels = self._hyper_params['in_channels']
-        out_channels = self._hyper_params['out_channels']
+        # super().update_params()
+        in_channels = self.default_hyper_params['in_channels']
+        out_channels = self.default_hyper_params['out_channels']
         self.adjustor = nn.Conv2d(in_channels, out_channels, 3, 1, 1)
         self._init_weights()
 
@@ -949,7 +646,7 @@ class ConvModule(nn.Module):
 
 
 
-class STMHead(ModuleBase):
+class STMHead(nn.Module):
     default_hyper_params = dict(
         total_stride=8,
         score_size=25,
@@ -960,6 +657,13 @@ class STMHead(ModuleBase):
 
     def __init__(self, ):
         super(STMHead, self).__init__()
+        self.default_hyper_params = dict(
+        total_stride=8,
+        score_size=25,
+        q_size=289,
+        input_size_adapt=False,
+        in_channels=512,
+        )
         self.bi = torch.nn.Parameter(torch.tensor(0.).type(torch.Tensor))
         self.si = torch.nn.Parameter(torch.tensor(1.).type(torch.Tensor))
 
@@ -1004,7 +708,7 @@ class STMHead(ModuleBase):
         offsets = torch.exp(self.si * offsets + self.bi) * self.total_stride
 
         # bbox decoding
-        if self._hyper_params["input_size_adapt"] and q_size > 0:
+        if self.default_hyper_params["input_size_adapt"] and q_size > 0:
             score_offset = (q_size - 1 - (offsets.size(-1) - 1) * self.total_stride) // 2
             fm_ctr = get_xy_ctr_np(offsets.size(-1), score_offset, self.total_stride)
             fm_ctr = fm_ctr.to(offsets.device)
@@ -1015,13 +719,13 @@ class STMHead(ModuleBase):
         return [cls_score, ctr_score, bbox, cls_feat]
 
     def update_params(self):
-        super().update_params()
+        # super().update_params()
 
-        q_size = self._hyper_params["q_size"]
-        self.score_size = self._hyper_params["score_size"]
-        self.total_stride = self._hyper_params["total_stride"]
+        q_size = self.default_hyper_params["q_size"]
+        self.score_size = self.default_hyper_params["score_size"]
+        self.total_stride = self.default_hyper_params["total_stride"]
         self.score_offset = (q_size - 1 - (self.score_size - 1) * self.total_stride) // 2
-        self._hyper_params["score_offset"] = self.score_offset
+        self.default_hyper_params["score_offset"] = self.score_offset
 
         ctr = get_xy_ctr_np(self.score_size, self.score_offset, self.total_stride)
         
@@ -1032,7 +736,7 @@ class STMHead(ModuleBase):
         self._initialize_conv()
 
     def _make_net(self):
-        self.in_channels = self._hyper_params["in_channels"]
+        self.in_channels = self.default_hyper_params["in_channels"]
         mdim = 256
 
         self.cls_ctr = ConvModule(self.in_channels * 2, mdim)
@@ -1078,18 +782,19 @@ class STMHead(ModuleBase):
 
 
 
-class STMTrack(ModuleBase):
+class STMTrack(nn.Module):
 
-    default_hyper_params = dict(pretrain_model_path="",
-                                head_width=256,
-                                conv_weight_std=0.01,
-                                corr_fea_output=False,
-                                amp=False)
+    
 
     support_phases = ["train", "memorize", "track"]
 
     def __init__(self, backbone_m, backbone_q, neck_m, neck_q, head, loss=None):
         super(STMTrack, self).__init__()
+        self.default_hyper_params = dict(pretrain_model_path="",
+                                head_width=256,
+                                conv_weight_std=0.01,
+                                corr_fea_output=False,
+                                amp=False)
         self.basemodel_m = backbone_m
         self.basemodel_q = backbone_q
         self.neck_m = neck_m
@@ -1137,7 +842,7 @@ class STMTrack(ModuleBase):
             ctr_pred=fcos_ctr_score_final,
             box_pred=fcos_bbox_final,
         )
-        if self._hyper_params["corr_fea_output"]:
+        if self.default_hyper_params["corr_fea_output"]:
             predict_data["corr_fea"] = corr_fea
         return predict_data
 
@@ -1147,7 +852,7 @@ class STMTrack(ModuleBase):
         # used during training
         if phase == 'train':
             # resolve training data
-            if self._hyper_params["amp"]:
+            if self.default_hyper_params["amp"]:
                 with torch.cuda.amp.autocast():
                     return self.train_forward(args[0])
             else:
@@ -1183,10 +888,10 @@ class STMTrack(ModuleBase):
     def update_params(self):
         self._make_convs()
         self._initialize_conv()
-        super().update_params()
+        # super().update_params()
 
     def _make_convs(self):
-        head_width = self._hyper_params['head_width']
+        head_width = self.default_hyper_params['head_width']
 
         # feature adjustment
         self.r_z_k = conv_bn_relu(head_width, head_width, 1, 3, 0, has_relu=False)
@@ -1195,7 +900,7 @@ class STMTrack(ModuleBase):
         self.c_x = conv_bn_relu(head_width, head_width, 1, 3, 0, has_relu=False)
 
     def _initialize_conv(self, ):
-        conv_weight_std = self._hyper_params['conv_weight_std']
+        conv_weight_std = self.default_hyper_params['conv_weight_std']
         conv_list = [
             self.r_z_k.conv, self.c_z_k.conv, self.r_x.conv, self.c_x.conv
         ]
@@ -1214,87 +919,87 @@ class STMTrack(ModuleBase):
 
 
 
-class PipelineBase:
-    r"""
-    Pipeline base class (e.g. procedure defined for tracker / segmentor / etc.)
-    Interface descriptions:
-        init(im, state):
-        update(im):
-    """
-    # Define your default hyper-parameters here in your sub-class.
-    default_hyper_params = dict()
+# class PipelineBase:
+#     r"""
+#     Pipeline base class (e.g. procedure defined for tracker / segmentor / etc.)
+#     Interface descriptions:
+#         init(im, state):
+#         update(im):
+#     """
+#     # Define your default hyper-parameters here in your sub-class.
+#     default_hyper_params = dict()
 
-    def __init__(self, model: ModuleBase):
-        self._hyper_params = deepcopy(
-            self.default_hyper_params)  # mapping-like object
-        self._state = dict()  # pipeline state
-        self._model = model
+#     def __init__(self, model: nn.Module):
+#         self._hyper_params = deepcopy(
+#             self.default_hyper_params)  # mapping-like object
+#         self._state = dict()  # pipeline state
+#         self._model = model
 
-    def get_hps(self) -> dict():
-        r"""
-        Getter function for hyper-parameters
+#     def get_hps(self) -> dict():
+#         r"""
+#         Getter function for hyper-parameters
 
-        Returns
-        -------
-        dict
-            hyper-parameters
-        """
-        return self._hyper_params
+#         Returns
+#         -------
+#         dict
+#             hyper-parameters
+#         """
+#         return self._hyper_params
 
-    def set_hps(self, hps: dict()) -> None:
-        r"""
-        Set hyper-parameters
+#     def set_hps(self, hps: dict()) -> None:
+#         r"""
+#         Set hyper-parameters
 
-        Arguments
-        ---------
-        hps: dict
-            dict of hyper-parameters, the keys must in self.__hyper_params__
-        """
-        for key in hps:
-            if key not in self._hyper_params:
-                raise KeyError
-            self._hyper_params[key] = hps[key]
+#         Arguments
+#         ---------
+#         hps: dict
+#             dict of hyper-parameters, the keys must in self.__hyper_params__
+#         """
+#         for key in hps:
+#             if key not in self._hyper_params:
+#                 raise KeyError
+#             self._hyper_params[key] = hps[key]
 
-    def update_params(self):
-        r"""
-        an interface for update params
-        """
-    def init(self, im, state):
-        r"""
-        an interface for pipeline initialization (e.g. template feature extraction)
-        default implementation: record initial state & do nothing
+#     def update_params(self):
+#         r"""
+#         an interface for update params
+#         """
+#     def init(self, im, state):
+#         r"""
+#         an interface for pipeline initialization (e.g. template feature extraction)
+#         default implementation: record initial state & do nothing
 
-        Arguments
-        ---------
-        im: numpy.array
-            initial frame image
-        state:
-            initial state (usually depending on task) (e.g. bbox for track / mask for vos)
-        """
-        self._state['state'] = state
+#         Arguments
+#         ---------
+#         im: numpy.array
+#             initial frame image
+#         state:
+#             initial state (usually depending on task) (e.g. bbox for track / mask for vos)
+#         """
+#         self._state['state'] = state
 
-    def update(self, im):
-        r"""
-        an interface for pipeline update
-            (e.g. output target bbox for current frame given the frame and previous target bbox)
-        default implementation: return previous target state (initial state)
+#     def update(self, im):
+#         r"""
+#         an interface for pipeline update
+#             (e.g. output target bbox for current frame given the frame and previous target bbox)
+#         default implementation: return previous target state (initial state)
 
-        Arguments
-        ---------
-        im: numpy.array
-            current frame
+#         Arguments
+#         ---------
+#         im: numpy.array
+#             current frame
 
-        Returns
-        -------
-        state
-            predicted sstate (usually depending on task) (e.g. bbox for track / mask for vos)
-        """
-        state = self._state['state']
-        return state
+#         Returns
+#         -------
+#         state
+#             predicted sstate (usually depending on task) (e.g. bbox for track / mask for vos)
+#         """
+#         state = self._state['state']
+#         return state
 
 
 
-class STMTrackTracker(PipelineBase):
+class STMTrackTracker():
     r"""
     default_hyper_params setting rules:
     0/0.0: to be set in config file manually.
@@ -1302,7 +1007,11 @@ class STMTrackTracker(PipelineBase):
     >0: default value.
     """
 
-    default_hyper_params = dict(
+    
+
+    def __init__(self,model):
+        # super(STMTrackTracker, self).__init__(*args, **kwargs)
+        self.default_hyper_params = dict(
         total_stride=8,
         score_size=25,
         score_offset=-1,
@@ -1321,24 +1030,23 @@ class STMTrackTracker(PipelineBase):
         confidence_threshold=0.6,
         gpu_memory_threshold=-1,
         search_area_factor=4.0,
-        visualization=False,
-    )
-
-    def __init__(self, *args, **kwargs):
-        super(STMTrackTracker, self).__init__(*args, **kwargs)
+        visualization=False )
         self.update_params()
 
         # set underlying model to device
         self.device = torch.device("cpu")
         self.debug = False
-        self.set_model(self._model)
+        self._model = model
+        self._model.eval()
+        self._state = dict()
+        # self.set_model(self._model)
 
     def set_model(self, model):
         """model to be set to pipeline. change device & turn it into eval mode
         
         Parameters
         ----------
-        model : ModuleBase
+        model : nn.Module
             model to be set to pipeline
         """
         self._model = model
@@ -1349,25 +1057,25 @@ class STMTrackTracker(PipelineBase):
         self.device = device
         self._model = self._model.to(device)
         if self.device != torch.device('cuda:0'):
-            self._hyper_params['gpu_memory_threshold'] = 3000
+            self.default_hyper_params['gpu_memory_threshold'] = 3000
 
     def update_params(self):
-        hps = self._hyper_params
+        hps = self.default_hyper_params
         assert hps['q_size'] == hps['m_size']
         hps['score_offset'] = (
             hps['q_size'] - 1 -
             (hps['score_size'] - 1) * hps['total_stride']) // 2
         if hps['gpu_memory_threshold'] == -1:
             hps['gpu_memory_threshold'] = 1 << 30  # infinity
-        self._hyper_params = hps
+        self.default_hyper_params = hps
 
-        self._hp_score_size = self._hyper_params['score_size']
-        self._hp_m_size = self._hyper_params['m_size']
-        self._hp_q_size = self._hyper_params['q_size']
-        self._hp_num_segments = self._hyper_params['num_segments']
-        self._hp_gpu_memory_threshold = self._hyper_params['gpu_memory_threshold']
-        self._hp_confidence_threshold = self._hyper_params['confidence_threshold']
-        self._hp_visualization = self._hyper_params['visualization']
+        self._hp_score_size = self.default_hyper_params['score_size']
+        self._hp_m_size = self.default_hyper_params['m_size']
+        self._hp_q_size = self.default_hyper_params['q_size']
+        self._hp_num_segments = self.default_hyper_params['num_segments']
+        self._hp_gpu_memory_threshold = self.default_hyper_params['gpu_memory_threshold']
+        self._hp_confidence_threshold = self.default_hyper_params['confidence_threshold']
+        self._hp_visualization = self.default_hyper_params['visualization']
 
     def create_fg_bg_label_map(self, bbox, size):
         r"""
@@ -1389,7 +1097,7 @@ class STMTrackTracker(PipelineBase):
         scale_m = math.sqrt(np.prod(target_sz) / np.prod(self._state['base_target_sz']))
         im_m_crop, real_scale = get_crop_single(im, target_pos, scale_m, m_size, avg_chans)
 
-        phase = self._hyper_params['phase_memorize']
+        phase = self.default_hyper_params['phase_memorize']
         with torch.no_grad():
             data = imarray_to_tensor(im_m_crop).to(self.device)
             bbox_m = np.concatenate([np.array([(m_size - 1) / 2, (m_size - 1) / 2]),
@@ -1442,10 +1150,10 @@ class STMTrackTracker(PipelineBase):
         self._state['im_w'] = im.shape[1]
 
         score_size = self._hp_score_size
-        if self._hyper_params['windowing'] == 'cosine':
+        if self.default_hyper_params['windowing'] == 'cosine':
             window = np.outer(np.hanning(score_size), np.hanning(score_size))
             window = window.reshape(-1)
-        elif self._hyper_params['windowing'] == 'uniform':
+        elif self.default_hyper_params['windowing'] == 'uniform':
             window = np.ones((score_size, score_size))
         else:
             window = np.ones((score_size, score_size))
@@ -1459,7 +1167,7 @@ class STMTrackTracker(PipelineBase):
         self._state['pscores'] = [1.0, ]
         self._state['cur_frame_idx'] = 1
         self._state["rng"] = np.random.RandomState(123456)
-        search_area = np.prod(target_sz * self._hyper_params['search_area_factor'])
+        search_area = np.prod(target_sz * self.default_hyper_params['search_area_factor'])
         self._state['target_scale'] = math.sqrt(search_area) / self._hp_q_size
         self._state['base_target_sz'] = target_sz / self._state['target_scale']
         if self._hp_visualization:
@@ -1482,7 +1190,7 @@ class STMTrackTracker(PipelineBase):
 
         q_size = self._hp_q_size
 
-        phase_track = self._hyper_params['phase_track']
+        phase_track = self.default_hyper_params['phase_track']
         im_q_crop, scale_q = get_crop_single(im_q, target_pos, self._state['target_scale'], q_size, avg_chans)
         self._state["scale_q"] = deepcopy(scale_q)
         with torch.no_grad():
@@ -1490,7 +1198,7 @@ class STMTrackTracker(PipelineBase):
                 imarray_to_tensor(im_q_crop).to(self.device),
                 features,
                 phase=phase_track)
-        if self._hyper_params["corr_fea_output"]:
+        if self.default_hyper_params["corr_fea_output"]:
             self._state["corr_fea"] = extra["corr_fea"]
 
         if self._hp_visualization:
@@ -1593,7 +1301,7 @@ class STMTrackTracker(PipelineBase):
         self._state['target_scale'] = math.sqrt(np.prod(target_sz) / np.prod(self._state['base_target_sz']))
         self._state['pscores'].append(self._state['pscore'])
         self._state['cur_frame_idx'] += 1
-        if self._hyper_params["corr_fea_output"]:
+        if self.default_hyper_params["corr_fea_output"]:
             return target_pos, target_sz, self._state["corr_fea"]
         return track_rect
 
@@ -1625,7 +1333,7 @@ class STMTrackTracker(PipelineBase):
             return np.sqrt(sz2)
 
         # size penalty
-        penalty_k = self._hyper_params['penalty_k']
+        penalty_k = self.default_hyper_params['penalty_k']
         target_sz_in_crop = target_sz * scale_x
         s_c = change(
             sz(box_wh[:, 2], box_wh[:, 3]) /
@@ -1639,7 +1347,7 @@ class STMTrackTracker(PipelineBase):
 
         # ipdb.set_trace()
         # cos window (motion model)
-        window_influence = self._hyper_params['window_influence']
+        window_influence = self.default_hyper_params['window_influence']
         pscore = pscore * (
             1 - window_influence) + self._state['window'] * window_influence
         best_pscore_id = np.argmax(pscore)
@@ -1669,7 +1377,7 @@ class STMTrackTracker(PipelineBase):
         # which can influence final EAO heavily given a model & a set of hyper-parameters
 
         # box post-postprocessing
-        test_lr = self._hyper_params['test_lr']
+        test_lr = self.default_hyper_params['test_lr']
         lr = penalty[best_pscore_id] * score[best_pscore_id] * test_lr
         res_x = pred_in_crop[0] + target_pos[0] - (x_size // 2) / scale_x
         res_y = pred_in_crop[1] + target_pos[1] - (x_size // 2) / scale_x
@@ -1691,9 +1399,9 @@ class STMTrackTracker(PipelineBase):
         """
         target_pos[0] = max(0, min(self._state['im_w'], target_pos[0]))
         target_pos[1] = max(0, min(self._state['im_h'], target_pos[1]))
-        target_sz[0] = max(self._hyper_params['min_w'],
+        target_sz[0] = max(self.default_hyper_params['min_w'],
                            min(self._state['im_w'], target_sz[0]))
-        target_sz[1] = max(self._hyper_params['min_h'],
+        target_sz[1] = max(self.default_hyper_params['min_h'],
                            min(self._state['im_h'], target_sz[1]))
 
         return target_pos, target_sz
