@@ -29,12 +29,14 @@ head.update_params()
 
 model = STMTrack(backbone_m, backbone_q, neck_m, neck_q, head)
 model.update_params()
+
 # Convert BatchNorm to SyncBatchNorm 
 # task_model = convert_model(task_model)
-model_file = "snapshots/stmtrack-googlenet-fulldata-train/epoch-19.pkl"
+model_file = "epoch-19.pkl"
 model_state_dict = torch.load(model_file,
                         map_location=torch.device("cpu"))
 
+model.load_state_dict(model_state_dict['model_state_dict'])
 
 pipeline_tracker = STMTrackTracker(model)
 pipeline_tracker.update_params()
@@ -69,7 +71,7 @@ frame_num = len(img_files)
 boxes = np.zeros((frame_num, 4))
 boxes[0] = box
 times = np.zeros(frame_num)
-my_file = open('output/'+g+'.txt','w+')
+# my_file = open('output/'+g+'.txt','w+')
 for f, img_file in enumerate(img_files):
 
         image = img_file
@@ -90,13 +92,13 @@ for f, img_file in enumerate(img_files):
                 # image = cv2.resize(image,(1920,1080))
                 # image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
                 line = str(pred[0])+','+str(pred[1])+','+str(pred[2])+','+str(pred[3])+'\n'
-                my_file.writelines(line)
+                # my_file.writelines(line)
                 cv2.imshow(g,image)
                 print("FPS: ",1/times[f])
 
         if cv2.waitKey(1)  == 27:
                 break
 
-my_file.close()
+# my_file.close()
 cv2.destroyAllWindows()
 
