@@ -781,9 +781,6 @@ class STMHead(nn.Module):
 
 
 class STMTrack(nn.Module):
-
-    
-
     support_phases = ["train", "memorize", "track"]
 
     def __init__(self, backbone_m, backbone_q, neck_m, neck_q, head, loss=None):
@@ -799,7 +796,7 @@ class STMTrack(nn.Module):
         self.neck_q = neck_q
         self.head = head
         self.loss = loss
-        self._phase = "train"
+        self._phase = "track"
 
     @property
     def phase(self):
