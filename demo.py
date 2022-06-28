@@ -1,19 +1,17 @@
 import cv2
-import matplotlib
-import matplotlib.pyplot as plt
+# import matplotlib
+# import matplotlib.pyplot as plt
 import numpy as np
 import glob
-import os.path as osp
 import torch
-import torch.nn as nn 
-from copy import deepcopy
+# import torch.nn as nn 
 import time
 import math
-from collections import OrderedDict
-import torch.nn.functional as F
+# import torch.nn.functional as F
 
 from net import *
 from utils import *
+from tracker import *
 
 
 backbone_m = Inception3_M()
@@ -46,12 +44,9 @@ pipeline_tracker.set_device(dev)
 
 
 g = "car1_s"
-
-
 path_gt = "/media/meysam/hdd/dataset/Dataset_UAV123/UAV123/anno/UAV123/car1_s.txt" 
 img_files_path = glob.glob("/media/meysam/hdd/dataset/Dataset_UAV123/UAV123/data_seq/UAV123/car1_s/*")
 img_files_path.sort()
-
 
 img_files = []
 for i in img_files_path:
@@ -80,6 +75,7 @@ for f, img_file in enumerate(img_files):
                 pipeline_tracker.init(image, box)
         else:
                 boxes[f, :] = pipeline_tracker.update(image)
+                # print(pipeline_tracker._state['pscores'][-1])
                 times[f] = time.time() - start_time
 
                 # visualiation         
