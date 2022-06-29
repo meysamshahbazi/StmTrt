@@ -412,31 +412,31 @@ class InceptionE(nn.Module):
         return torch.cat(outputs, 1)
 
 
-class InceptionAux(nn.Module):
-    def __init__(self, in_channels, num_classes):
-        super(InceptionAux, self).__init__()
-        self.conv0 = BasicConv2d(in_channels, 128, kernel_size=1)
-        self.conv1 = BasicConv2d(128, 768, kernel_size=5)
-        self.conv1.stddev = 0.01
-        self.fc = nn.Linear(768, num_classes)
-        self.fc.stddev = 0.001
+# class InceptionAux(nn.Module):
+#     def __init__(self, in_channels, num_classes):
+#         super(InceptionAux, self).__init__()
+#         self.conv0 = BasicConv2d(in_channels, 128, kernel_size=1)
+#         self.conv1 = BasicConv2d(128, 768, kernel_size=5)
+#         self.conv1.stddev = 0.01
+#         self.fc = nn.Linear(768, num_classes)
+#         self.fc.stddev = 0.001
 
-    def forward(self, x):
-        # N x 768 x 17 x 17
-        x = F.avg_pool2d(x, kernel_size=5, stride=3)
-        # N x 768 x 5 x 5
-        x = self.conv0(x)
-        # N x 128 x 5 x 5
-        x = self.conv1(x)
-        # N x 768 x 1 x 1
-        # Adaptive average pooling
-        x = F.adaptive_avg_pool2d(x, (1, 1))
-        # N x 768 x 1 x 1
-        x = torch.flatten(x, 1)
-        # N x 768
-        x = self.fc(x)
-        # N x 1000
-        return x
+#     def forward(self, x):
+#         # N x 768 x 17 x 17
+#         x = F.avg_pool2d(x, kernel_size=5, stride=3)
+#         # N x 768 x 5 x 5
+#         x = self.conv0(x)
+#         # N x 128 x 5 x 5
+#         x = self.conv1(x)
+#         # N x 768 x 1 x 1
+#         # Adaptive average pooling
+#         x = F.adaptive_avg_pool2d(x, (1, 1))
+#         # N x 768 x 1 x 1
+#         x = torch.flatten(x, 1)
+#         # N x 768
+#         x = self.fc(x)
+#         # N x 1000
+#         return x
 
 
 class BasicConv2d(nn.Module):
