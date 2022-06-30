@@ -872,37 +872,38 @@ class STMTrack(nn.Module):
             # apply centerness correction
             fcos_score_final = fcos_cls_prob_final * fcos_ctr_prob_final
 
-            extra = dict()
+            # extra = dict()
             # output
-            out_list = fcos_score_final, fcos_bbox_final, fcos_cls_prob_final, fcos_ctr_prob_final, extra
+            out_list = fcos_score_final, fcos_bbox_final, fcos_cls_prob_final, fcos_ctr_prob_final#, extra
         else:
             raise ValueError("Phase non-implemented.")
 
         return out_list
 
-    def update_params(self):
-        self._make_convs()
-        self._initialize_conv()
-        # super().update_params()
+    # def update_params(self):
+    #     pass
+    #     # self._make_convs()
+    #     # self._initialize_conv()
+    #     # super().update_params()
 
-    def _make_convs(self):
-        head_width = self.default_hyper_params['head_width']
+    # def _make_convs(self):
+    #     head_width = self.default_hyper_params['head_width']
 
-        # feature adjustment
-        self.r_z_k = conv_bn_relu(head_width, head_width, 1, 3, 0, has_relu=False)
-        self.c_z_k = conv_bn_relu(head_width, head_width, 1, 3, 0, has_relu=False)
-        self.r_x = conv_bn_relu(head_width, head_width, 1, 3, 0, has_relu=False)
-        self.c_x = conv_bn_relu(head_width, head_width, 1, 3, 0, has_relu=False)
+    #     # feature adjustment
+    #     self.r_z_k = conv_bn_relu(head_width, head_width, 1, 3, 0, has_relu=False)
+    #     self.c_z_k = conv_bn_relu(head_width, head_width, 1, 3, 0, has_relu=False)
+    #     self.r_x = conv_bn_relu(head_width, head_width, 1, 3, 0, has_relu=False)
+    #     self.c_x = conv_bn_relu(head_width, head_width, 1, 3, 0, has_relu=False)
 
-    def _initialize_conv(self, ):
-        conv_weight_std = self.default_hyper_params['conv_weight_std']
-        conv_list = [
-            self.r_z_k.conv, self.c_z_k.conv, self.r_x.conv, self.c_x.conv
-        ]
-        for ith in range(len(conv_list)):
-            conv = conv_list[ith]
-            torch.nn.init.normal_(conv.weight,
-                                  std=conv_weight_std)  # conv_weight_std=0.01
+    # def _initialize_conv(self, ):
+    #     conv_weight_std = self.default_hyper_params['conv_weight_std']
+    #     conv_list = [
+    #         self.r_z_k.conv, self.c_z_k.conv, self.r_x.conv, self.c_x.conv
+    #     ]
+    #     for ith in range(len(conv_list)):
+    #         conv = conv_list[ith]
+    #         torch.nn.init.normal_(conv.weight,
+    #                               std=conv_weight_std)  # conv_weight_std=0.01
 
     def set_device(self, dev):
         if not isinstance(dev, torch.device):

@@ -26,20 +26,24 @@ head = STMHead()
 head.update_params()
 
 model = STMTrack(backbone_m, backbone_q, neck_m, neck_q, head)
-model.update_params()
+# model.update_params()
 
 # Convert BatchNorm to SyncBatchNorm 
 # task_model = convert_model(task_model)
-model_file = "epoch-19.pkl"
+model_file = "new-epoch-19.pkl"
+
+# model_file = "epoch-19.pkl"
 model_state_dict = torch.load(model_file,
                         map_location=torch.device("cpu"))
 
-model.load_state_dict(model_state_dict['model_state_dict'])
+# model.load_state_dict(model_state_dict['model_state_dict'])
+model.load_state_dict(model_state_dict)
 
 pipeline_tracker = STMTrackTracker(model)
 pipeline_tracker.update_params()
 
-dev = torch.device('cuda:0') 
+# dev = torch.device('cuda:0') 
+dev = torch.device('cuda:0')
 pipeline_tracker.set_device(dev)
 
 
@@ -92,8 +96,8 @@ for f, img_file in enumerate(img_files):
                 cv2.imshow(g,image)
                 print("FPS: ",1/times[f])
 
-        if cv2.waitKey(1)  == 27:
-                break
+                if cv2.waitKey(1)  == 27:
+                        break
 
 # my_file.close()
 cv2.destroyAllWindows()

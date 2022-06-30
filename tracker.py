@@ -10,10 +10,11 @@ import torch.nn as nn
 from copy import deepcopy
 import time
 import math
-from collections import OrderedDict
 import torch.nn.functional as F
 from utils import *
 from net import *
+
+
 class STMTrackTracker():
     r"""
     default_hyper_params setting rules:
@@ -46,7 +47,7 @@ class STMTrackTracker():
         self.update_params()
 
         # set underlying model to device
-        self.device = torch.device("cpu")
+        self.device = torch.device("cuda:0")
         self.debug = False
         self._model = model
         self._model.eval()
@@ -68,8 +69,8 @@ class STMTrackTracker():
     def set_device(self, device):
         self.device = device
         self._model = self._model.to(device)
-        if self.device != torch.device('cuda:0'):
-            self.default_hyper_params['gpu_memory_threshold'] = 3000
+        # if self.device != torch.device('cuda:0'):
+        # self.default_hyper_params['gpu_memory_threshold'] = 3000
 
     def update_params(self):
         hps = self.default_hyper_params
@@ -183,8 +184,8 @@ class STMTrackTracker():
         search_area = np.prod(target_sz * self.default_hyper_params['search_area_factor'])
         self._state['target_scale'] = math.sqrt(search_area) / self._hp_q_size
         self._state['base_target_sz'] = target_sz / self._state['target_scale']
-        if self._hp_visualization:
-            vsm.rename_dir()
+        # if self._hp_visualization:
+        #     vsm.rename_dir()
 
     def get_avg_chans(self):
         return self._state['avg_chans']
@@ -207,16 +208,16 @@ class STMTrackTracker():
         im_q_crop, scale_q = get_crop_single(im_q, target_pos, self._state['target_scale'], q_size, avg_chans)
         self._state["scale_q"] = deepcopy(scale_q)
         with torch.no_grad():
-            score, box, cls, ctr, extra = self._model(
+            score, box, cls, ctr = self._model(
                 imarray_to_tensor(im_q_crop).to(self.device),
                 features,
                 phase=phase_track)
-        if self.default_hyper_params["corr_fea_output"]:
-            self._state["corr_fea"] = extra["corr_fea"]
+        # if self.default_hyper_params["corr_fea_output"]:
+        #     self._state["corr_fea"] = extra["corr_fea"]
 
-        if self._hp_visualization:
-            score1 = tensor_to_numpy(score[0])[:, 0]
-            vsm.visualize(score1, self._hp_score_size, im_q_crop, self._state['cur_frame_idx'], 'raw_score')
+        # if self._hp_visualization:
+        #     score1 = tensor_to_numpy(score[0])[:, 0]
+        #     vsm.visualize(score1, self._hp_score_size, im_q_crop, self._state['cur_frame_idx'], 'raw_score')
 
         box = tensor_to_numpy(box[0])
         score = tensor_to_numpy(score[0])[:, 0]
@@ -355,8 +356,8 @@ class STMTrackTracker():
                      (box_wh[:, 2] / box_wh[:, 3]))  # ratio penalty
         penalty = np.exp(-(r_c * s_c - 1) * penalty_k)
         pscore = penalty * score
-        if self._hp_visualization:
-            vsm.visualize(pscore, self._hp_score_size, im_x_crop, self._state['cur_frame_idx'], 'pscore_0')
+        # if self._hp_visualization:
+        #     vsm.visualize(pscore, self._hp_score_size, im_x_crop, self._state['cur_frame_idx'], 'pscore_0')
 
         # ipdb.set_trace()
         # cos window (motion model)
@@ -364,8 +365,8 @@ class STMTrackTracker():
         pscore = pscore * (
             1 - window_influence) + self._state['window'] * window_influence
         best_pscore_id = np.argmax(pscore)
-        if self._hp_visualization:
-            vsm.visualize(pscore, self._hp_score_size, im_x_crop, self._state['cur_frame_idx'], 'pscore_1')
+        # if self._hp_visualization:
+        #     vsm.visualize(pscore, self._hp_score_size, im_x_crop, self._state['cur_frame_idx'], 'pscore_1')
 
         return best_pscore_id, pscore, penalty
 
