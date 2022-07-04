@@ -94,7 +94,7 @@ for f, img_file in enumerate(img_files):
                 line = str(pred[0])+','+str(pred[1])+','+str(pred[2])+','+str(pred[3])+'\n'
                 # my_file.writelines(line)
                 cv2.imshow(g,image)
-                print("FPS: ",1/times[f])
+                print("FPS:s ",1/times[f])
 
                 if cv2.waitKey(1)  == 27:
                         break

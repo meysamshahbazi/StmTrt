@@ -691,11 +691,11 @@ class STMHead(nn.Module):
         centerness = self.ctr_score(cls_feat)
         regression = self.reg_offsets(reg_feat)
 
-        return classification, centerness, regression, cls_feat
+        return classification, centerness, regression
 
     def forward(self, fm, fq, q_size=0):
         y = self.memory_read(fm, fq)
-        cls_score, ctr_score, offsets, cls_feat = self.solve(y)
+        cls_score, ctr_score, offsets = self.solve(y)
 
         cls_score = cls_score.permute(0, 2, 3, 1)
         cls_score = cls_score.reshape(cls_score.shape[0], -1, 1)
@@ -714,7 +714,7 @@ class STMHead(nn.Module):
             fm_ctr = self.fm_ctr.to(offsets.device)
         bbox = get_box(fm_ctr, offsets)
 
-        return [cls_score, ctr_score, bbox, cls_feat]
+        return [cls_score, ctr_score, bbox]
 
     def update_params(self):
         # super().update_params()
@@ -731,7 +731,7 @@ class STMHead(nn.Module):
         self.fm_ctr.require_grad = False
 
         self._make_net()
-        self._initialize_conv()
+        # self._initialize_conv()
 
     def _make_net(self):
         self.in_channels = self.default_hyper_params["in_channels"]
@@ -808,6 +808,7 @@ class STMTrack(nn.Module):
         self._phase = p
 
     def memorize(self, im_crop, fg_bg_label_map):
+       
         fm = self.basemodel_m(im_crop, fg_bg_label_map)
         fm = self.neck_m(fm)
         fm = fm.permute(1, 0, 2, 3).unsqueeze(0).contiguous()  # B, C, T, H, W
@@ -863,8 +864,7 @@ class STMTrack(nn.Module):
             search_img, fm = args
             fq = self.basemodel_q(search_img)
             fq = self.neck_q(fq)  # B, C, H, W
-
-            fcos_cls_score_final, fcos_ctr_score_final, fcos_bbox_final, corr_fea = self.head(
+            fcos_cls_score_final, fcos_ctr_score_final, fcos_bbox_final = self.head(
                 fm, fq, search_img.size(-1))
             # apply sigmoid
             fcos_cls_prob_final = torch.sigmoid(fcos_cls_score_final)

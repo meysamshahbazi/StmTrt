@@ -1,14 +1,7 @@
-
-import cv2
-import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
-import glob
-import os.path as osp
 import torch
 import torch.nn as nn 
 from copy import deepcopy
-import time
 import math
 import torch.nn.functional as F
 from utils import *
@@ -205,8 +198,10 @@ class STMTrackTracker():
         q_size = self._hp_q_size
 
         phase_track = self.default_hyper_params['phase_track']
+        # print(im_q.shape)
         im_q_crop, scale_q = get_crop_single(im_q, target_pos, self._state['target_scale'], q_size, avg_chans)
         self._state["scale_q"] = deepcopy(scale_q)
+        # print(features.shape)
         with torch.no_grad():
             score, box, cls, ctr = self._model(
                 imarray_to_tensor(im_q_crop).to(self.device),
@@ -233,8 +228,8 @@ class STMTrackTracker():
             best_pscore_id, score, box_wh, target_pos, target_sz, scale_q,
             q_size, penalty)
 
-        if self.debug:
-            box = self._cvt_box_crop2frame(box_wh, target_pos, q_size, scale_q)
+        # if self.debug:
+        #     box = self._cvt_box_crop2frame(box_wh, target_pos, q_size, scale_q)
 
         # restrict new_target_pos & new_target_sz
         new_target_pos, new_target_sz = self._restrict_box(
