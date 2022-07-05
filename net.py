@@ -667,6 +667,7 @@ class STMHead(nn.Module):
 
     def memory_read(self, fm, fq):
         B, C, T, H, W = fm.size()
+        # print(B, C, T, H, W)
         fm0 = fm.clone()
         fq0 = fq.clone()
 
@@ -675,6 +676,7 @@ class STMHead(nn.Module):
         fq = fq.view(B, C, H * W)  # B, C, HW
 
         w = torch.bmm(fm, fq) / math.sqrt(C)  # B, THW, HW
+        w = torch.bmm(fm, fq) / math.sqrt(512)
         w = torch.softmax(w, dim=1)
 
         fm1 = fm0.view(B, C, T * H * W)  # B, C, THW
@@ -694,9 +696,11 @@ class STMHead(nn.Module):
         return classification, centerness, regression
 
     def forward(self, fm, fq, q_size=0):
+        print("fm: ",fm.shape)
+        print("fq: ",fq .shape)
         y = self.memory_read(fm, fq)
         cls_score, ctr_score, offsets = self.solve(y)
-
+        # print(cls_score.shape,  "|",ctr_score.shape, "|",offsets.shape)
         cls_score = cls_score.permute(0, 2, 3, 1)
         cls_score = cls_score.reshape(cls_score.shape[0], -1, 1)
 
@@ -713,7 +717,7 @@ class STMHead(nn.Module):
         else:
             fm_ctr = self.fm_ctr.to(offsets.device)
         bbox = get_box(fm_ctr, offsets)
-
+        print(bbox.shape)
         return [cls_score, ctr_score, bbox]
 
     def update_params(self):
@@ -864,9 +868,11 @@ class STMTrack(nn.Module):
             search_img, fm = args
             fq = self.basemodel_q(search_img)
             fq = self.neck_q(fq)  # B, C, H, W
+
             fcos_cls_score_final, fcos_ctr_score_final, fcos_bbox_final = self.head(
                 fm, fq, search_img.size(-1))
             # apply sigmoid
+            # print("fcos_bbox_final ",fcos_bbox_final.shape)
             fcos_cls_prob_final = torch.sigmoid(fcos_cls_score_final)
             fcos_ctr_prob_final = torch.sigmoid(fcos_ctr_score_final)
             # apply centerness correction

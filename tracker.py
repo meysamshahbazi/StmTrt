@@ -213,8 +213,9 @@ class STMTrackTracker():
         # if self._hp_visualization:
         #     score1 = tensor_to_numpy(score[0])[:, 0]
         #     vsm.visualize(score1, self._hp_score_size, im_q_crop, self._state['cur_frame_idx'], 'raw_score')
-
+        # print("befor ",box.shape)
         box = tensor_to_numpy(box[0])
+        # print("after ",box.shape)
         score = tensor_to_numpy(score[0])[:, 0]
         cls = tensor_to_numpy(cls[0])
         ctr = tensor_to_numpy(ctr[0])
