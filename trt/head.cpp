@@ -194,7 +194,7 @@ int main(int argc, const char ** argv)
     vector<nvinfer1::Dims> output_dims;
 
     vector<void *> buffers(engine->getNbBindings());
-    std::cout<<"engine->getNbBindings()"<<engine->getNbBindings()<<endl;
+    std::cout<<"engine->getNbBindings(): "<<engine->getNbBindings()<<endl;
     for (size_t i = 0; i < engine->getNbBindings(); ++i)
     {
         auto binding_size = getSizeByDim(engine->getBindingDimensions(i)) * batch_size * sizeof(float);
@@ -219,7 +219,7 @@ int main(int argc, const char ** argv)
     std::cout<<"size of input_dims: "<<input_dims.size()<<std::endl;
     std::cout<<"size of output: "<<output_dims.size()<<std::endl;
    
-    #define FM_SIZE 512* 6* 25* 25
+    #define FM_SIZE 512*6*25*25
     float *fm;
     fm = (float *)malloc(FM_SIZE*sizeof(float));
     for (int i = 0; i < FM_SIZE; i++)

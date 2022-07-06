@@ -696,8 +696,8 @@ class STMHead(nn.Module):
         return classification, centerness, regression
 
     def forward(self, fm, fq, q_size=0):
-        print("fm: ",fm.shape)
-        print("fq: ",fq .shape)
+        # print("fm: ",fm.shape)
+        # print("fq: ",fq .shape)
         y = self.memory_read(fm, fq)
         cls_score, ctr_score, offsets = self.solve(y)
         # print(cls_score.shape,  "|",ctr_score.shape, "|",offsets.shape)
@@ -717,7 +717,7 @@ class STMHead(nn.Module):
         else:
             fm_ctr = self.fm_ctr.to(offsets.device)
         bbox = get_box(fm_ctr, offsets)
-        print(bbox.shape)
+        # print(bbox.shape)
         return [cls_score, ctr_score, bbox]
 
     def update_params(self):
