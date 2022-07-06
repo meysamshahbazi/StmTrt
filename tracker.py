@@ -277,6 +277,7 @@ class STMTrackTracker():
             box = xywh2cxywh(rect).reshape(4)
             target_pos_prior, target_sz_prior = box[:2], box[2:]
 
+        
         fidx = self._state['cur_frame_idx']
         prev_frame_feat = self.memorize(self._state['last_img'],
                                  self._state['track_rects'][fidx - 1]['target_pos'],

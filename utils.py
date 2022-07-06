@@ -1,18 +1,18 @@
 # adaptaed from video analysis
 
 import cv2
-import matplotlib
-import matplotlib.pyplot as plt
+# import matplotlib
+# import matplotlib.pyplot as plt
 import numpy as np
-import glob
-import os.path as osp
+# import glob
+# import os.path as osp
 import torch
-import torch.nn as nn 
-from copy import deepcopy
-import time
-import math
-from collections import OrderedDict
-import torch.nn.functional as F
+# import torch.nn as nn 
+# from copy import deepcopy
+# import time
+# import math
+# from collections import OrderedDict
+# import torch.nn.functional as F
 
 
 def get_xy_ctr_np(score_size, score_offset, total_stride):
@@ -116,19 +116,19 @@ def get_crop_numpy(im: np.ndarray, pos: np.ndarray, sample_sz: np.ndarray, outpu
     posl = pos.astype(np.int32).copy()
 
     # Get new sample size if forced inside the image
-    if mode == 'inside' or mode == 'inside_major':
-        pad_mode = 'replicate'
-        # im_sz = torch.tensor([im.shape[2], im.shape[3]], device=im.device)
-        # shrink_factor = (sample_sz.float() / im_sz)
-        im_sz = np.array([im.shape[0], im.shape[1]])
-        shrink_factor = (sample_sz.astype(np.float) / im_sz)
-        if mode == 'inside':
-            shrink_factor = shrink_factor.max()
-        elif mode == 'inside_major':
-            shrink_factor = shrink_factor.min()
-        shrink_factor.clamp_(min=1, max=max_scale_change)
-        # sample_sz = (sample_sz.float() / shrink_factor).long()
-        sample_sz = (sample_sz.astype(np.float) / shrink_factor).astype(np.int32)
+    # if mode == 'inside' or mode == 'inside_major':
+    #     pad_mode = 'replicate'
+    #     # im_sz = torch.tensor([im.shape[2], im.shape[3]], device=im.device)
+    #     # shrink_factor = (sample_sz.float() / im_sz)
+    #     im_sz = np.array([im.shape[0], im.shape[1]])
+    #     shrink_factor = (sample_sz.astype(np.float) / im_sz)
+    #     if mode == 'inside':
+    #         shrink_factor = shrink_factor.max()
+    #     elif mode == 'inside_major':
+    #         shrink_factor = shrink_factor.min()
+    #     shrink_factor.clamp_(min=1, max=max_scale_change)
+    #     # sample_sz = (sample_sz.float() / shrink_factor).long()
+    #     sample_sz = (sample_sz.astype(np.float) / shrink_factor).astype(np.int32)
 
     # Compute pre-downsampling factor
     if output_sz is not None:
@@ -158,23 +158,23 @@ def get_crop_numpy(im: np.ndarray, pos: np.ndarray, sample_sz: np.ndarray, outpu
     br = posl + szl // 2 + 1
 
     # Shift the crop to inside
-    if mode == 'inside' or mode == 'inside_major':
-        # im2_sz = torch.LongTensor([im2.shape[2], im2.shape[3]])
-        # shift = (-tl).clamp(0) - (br - im2_sz).clamp(0)
-        im2_sz = np.array([im2.shape[0], im2.shape[1]], dtype=np.int32)
-        shift = np.clip(-tl, 0) - np.clip(br - im2_sz, 0)
-        tl += shift
-        br += shift
+    # if mode == 'inside' or mode == 'inside_major':
+    #     # im2_sz = torch.LongTensor([im2.shape[2], im2.shape[3]])
+    #     # shift = (-tl).clamp(0) - (br - im2_sz).clamp(0)
+    #     im2_sz = np.array([im2.shape[0], im2.shape[1]], dtype=np.int32)
+    #     shift = np.clip(-tl, 0) - np.clip(br - im2_sz, 0)
+    #     tl += shift
+    #     br += shift
 
-        # outside = ((-tl).clamp(0) + (br - im2_sz).clamp(0)) // 2
-        # shift = (-tl - outside) * (outside > 0).long()
-        outside = (np.clip(-tl, 0) - np.clip(br - im2_sz, 0)) // 2
-        shift = (-tl - outside) * (outside > 0).astype(np.int32)
-        tl += shift
-        br += shift
+    #     # outside = ((-tl).clamp(0) + (br - im2_sz).clamp(0)) // 2
+    #     # shift = (-tl - outside) * (outside > 0).long()
+    #     outside = (np.clip(-tl, 0) - np.clip(br - im2_sz, 0)) // 2
+    #     shift = (-tl - outside) * (outside > 0).astype(np.int32)
+    #     tl += shift
+    #     br += shift
 
-        # Get image patch
-        # im_patch = im2[...,tl[0].item():br[0].item(),tl[1].item():br[1].item()]
+    #     # Get image patch
+    #     # im_patch = im2[...,tl[0].item():br[0].item(),tl[1].item():br[1].item()]
 
     crop_xyxy = np.array([tl[1], tl[0], br[1], br[0]])
     # warpAffine transform matrix
@@ -201,101 +201,6 @@ def get_crop_numpy(im: np.ndarray, pos: np.ndarray, sample_sz: np.ndarray, outpu
     return im_patch, patch_coord, scale
 
 
-def get_crop_torch(im: torch.Tensor, pos: torch.Tensor, sample_sz: torch.Tensor, output_sz: torch.Tensor = None,
-                 mode: str = 'replicate', max_scale_change=None, is_mask=False):
-    """Sample an image patch.
-
-    args:
-        im: Image
-        pos: center position of crop
-        sample_sz: size to crop
-        output_sz: size to resize to
-        mode: how to treat image borders: 'replicate' (default), 'inside' or 'inside_major'
-        max_scale_change: maximum allowed scale change when using 'inside' and 'inside_major' mode
-    """
-
-    # if mode not in ['replicate', 'inside']:
-    #     raise ValueError('Unknown border mode \'{}\'.'.format(mode))
-
-    # copy and convert
-    posl = pos.long().clone()
-
-    pad_mode = mode
-
-    # Get new sample size if forced inside the image
-    if mode == 'inside' or mode == 'inside_major':
-        pad_mode = 'replicate'
-        im_sz = torch.tensor([im.shape[2], im.shape[3]], device=im.device)
-        shrink_factor = (sample_sz.float() / im_sz)
-        if mode == 'inside':
-            shrink_factor = shrink_factor.max()
-        elif mode == 'inside_major':
-            shrink_factor = shrink_factor.min()
-        shrink_factor.clamp_(min=1, max=max_scale_change)
-        sample_sz = (sample_sz.float() / shrink_factor).long()
-
-    # Compute pre-downsampling factor
-    if output_sz is not None:
-        resize_factor = torch.min(sample_sz.float() / output_sz.float()).item()
-        df = int(max(int(resize_factor - 0.1), 1))
-    else:
-        df = int(1)
-
-    sz = sample_sz.float() / df  # new size
-
-    # Do downsampling
-    if df > 1:
-        os = posl % df  # offset
-        posl = (posl - os) // df  # new position
-        im2 = im[..., os[0].item()::df, os[1].item()::df]  # downsample
-    else:
-        im2 = im
-
-    # compute size to crop
-    szl = torch.max(sz.round(), torch.tensor([2.0], dtype=sz.dtype, device=sz.device)).long()
-
-    # Extract top and bottom coordinates
-    tl = posl - (szl - 1) // 2
-    br = posl + szl // 2 + 1
-
-    # Shift the crop to inside
-    if mode == 'inside' or mode == 'inside_major':
-        im2_sz = torch.LongTensor([im2.shape[2], im2.shape[3]])
-        shift = (-tl).clamp(0) - (br - im2_sz).clamp(0)
-        tl += shift
-        br += shift
-
-        outside = ((-tl).clamp(0) + (br - im2_sz).clamp(0)) // 2
-        shift = (-tl - outside) * (outside > 0).long()
-        tl += shift
-        br += shift
-
-        # Get image patch
-        # im_patch = im2[...,tl[0].item():br[0].item(),tl[1].item():br[1].item()]
-
-
-    # Get image patch
-    if not is_mask:
-        im_patch = F.pad(im2, (-tl[1].item(), br[1].item() - im2.shape[3], -tl[0].item(), br[0].item() - im2.shape[2]),
-                         mode=pad_mode)
-    else:
-        im_patch = F.pad(im2, (-tl[1].item(), br[1].item() - im2.shape[3], -tl[0].item(), br[0].item() - im2.shape[2]))
-
-    # Get image coordinates
-    patch_coord = df * torch.cat((tl, br)).view(1, 4)
-
-    scale = output_sz / (torch.tensor(im_patch.shape, device=im_patch.device)[-2:] * df)
-
-    if output_sz is None or (im_patch.shape[-2] == output_sz[0] and im_patch.shape[-1] == output_sz[1]):
-        return im_patch.clone(), patch_coord, scale
-
-    # Resample
-    if not is_mask:
-        im_patch = F.interpolate(im_patch, output_sz.long().tolist(), mode='bilinear')
-    else:
-        im_patch = F.interpolate(im_patch, output_sz.long().tolist(), mode='nearest')
-
-    return im_patch, patch_coord, scale
 
 def get_crop_single(im: np.ndarray, target_pos: np.ndarray, target_scale: float, output_sz: int, avg_chans: tuple):
     pos = target_pos[::-1]

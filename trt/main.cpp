@@ -22,7 +22,8 @@ int main(int argc, const char ** argv)
     cap >> frame;
     stmtracker st;
     st.init(frame,roi);
-    
+    cap >> frame;
+    st.update(frame);
     return 0;
 }
 

@@ -81,14 +81,36 @@ void stmtracker::init(Mat im, Rect2f state)
     target_scale = std::sqrt(search_area)/q_size;
     base_target_sz = target_sz/target_scale;
 
-    // std::cout<<search_area<<endl;
-    // std::cout<<target_scale<<endl;
-    // std::cout<<base_target_sz<<endl;
-    
-
     return;
 }
 
+Rect stmtracker::update(Mat im)
+{
+    target_pos_prior = target_pos;
+    target_sz_prior = target_sz;
+    
+    int fidx = cur_frame_idx;
+
+    memorize();
+    
+}
+
+void stmtracker::memorize()
+{
+    const int m_siz{289};
+    float scale_m = std::sqrt(target_sz_prior.area()/base_target_sz.area());
+    get_crop_single(last_img,);
+    std::cout<<scale_m<<std::endl;
+    return;
+}
+
+void stmtracker::get_crop_single(const Mat & im,Point2f target_pos,
+                                float target_scale,int output_sz,Scalar avg_chans,
+                                Mat &im_patch,float &real_scale) // these are output 
+{
+    // reversed pos!!
+    float sample_sz = target_scale*output_sz;    
+}
 stmtracker::~stmtracker()
 {
     for (void * buf : buffers_base_q)

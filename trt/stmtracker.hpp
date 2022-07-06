@@ -67,13 +67,21 @@ private:
     const float q_size{289.0};
     float target_scale;
     Size2f base_target_sz;
+
+    Point2f target_pos_prior;
+    Size2f target_sz_prior;
     
 
 public:
     stmtracker(/* args */);
     ~stmtracker();
     void init(Mat im, Rect2f state);
-    Rect update(Mat frame);
+    Rect update(Mat im);
+    void memorize();
+    void get_crop_single(const Mat &im,Point2f target_pos,float target_scale, // all input 
+                        int output_sz, Scalar avg_chans, // all input 
+                        Mat &im_patch, float &real_scale); // these are output 
+    
 };
 
 
