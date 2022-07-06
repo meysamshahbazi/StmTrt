@@ -49,12 +49,30 @@ private:
     vector<nvinfer1::Dims> output_dims_base_m;
     vector<nvinfer1::Dims> input_dims_head;
     vector<nvinfer1::Dims> output_dims_head;
+
+    Point2f target_pos;
+    Size2f target_sz;
+    
+    int im_h;
+    int im_w;
+
+    const int score_size{25};
+    Mat window;
+    vector<void *> all_memory_frame_feats; // TODO: change this
+    Scalar avg_chans;// this has 4 value and the order is not the same as in python
+    Mat last_img;
+    std::vector<float> pscores;
+    int cur_frame_idx {0};
+    const float search_area_factor {4.0};
+    const float q_size{289.0};
+    float target_scale;
+    Size2f base_target_sz;
     
 
 public:
     stmtracker(/* args */);
     ~stmtracker();
-    void init(Mat frame, Rect box);
+    void init(Mat im, Rect2f state);
     Rect update(Mat frame);
 };
 

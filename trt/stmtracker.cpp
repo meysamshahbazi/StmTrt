@@ -4,6 +4,7 @@
 #define batch_size 1
 stmtracker::stmtracker(/* args */)
 {
+    /*
     parseOnnxModel(model_path_base_q,engine_base_q,context_base_q);
     parseOnnxModel(model_path_base_m,engine_base_m,context_base_m);
     parseOnnxModel(model_path_head,engine_head,context_head);
@@ -59,7 +60,33 @@ stmtracker::stmtracker(/* args */)
             output_dims_head.emplace_back(engine_head->getBindingDimensions(i));
         }
     }
+    */
 
+}
+
+void stmtracker::init(Mat im, Rect2f state)
+{
+    // im: first frame for tracke
+    // state: cv::Rect format constructed with xywh foramt 
+    target_pos = (state.br()+state.tl())/2;
+    target_sz = state.size();
+    im_h = im.rows;
+    im_w = im.cols;
+    window = get_hann_win(Size(score_size,score_size));
+    avg_chans = cv::mean(im);
+    last_img = im;
+    pscores.push_back(1.0f);
+    cur_frame_idx = 1;
+    float search_area = search_area_factor*search_area_factor*target_sz.area();
+    target_scale = std::sqrt(search_area)/q_size;
+    base_target_sz = target_sz/target_scale;
+
+    // std::cout<<search_area<<endl;
+    // std::cout<<target_scale<<endl;
+    // std::cout<<base_target_sz<<endl;
+    
+
+    return;
 }
 
 stmtracker::~stmtracker()

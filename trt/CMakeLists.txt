@@ -11,6 +11,6 @@ find_package(OpenCV REQUIRED)
 find_package(TensorRT REQUIRED)
 
 # TARGETS --------------------------------------------------------------------------------------------------------------
-add_executable(stmtracker main.cpp stmtracker.cpp)
+add_executable(stmtracker main.cpp stmtracker.cpp utils.cpp)
 target_include_directories(stmtracker PUBLIC ${OpenCV_INCLUDE_DIRS} ${CUDA_INCLUDE_DIRS} ${TensorRT_INCLUDE_DIRS})
 target_link_libraries(stmtracker PUBLIC ${OpenCV_LIBS} ${CUDA_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${TensorRT_LIBRARIES})
