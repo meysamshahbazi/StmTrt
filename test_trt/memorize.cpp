@@ -93,8 +93,8 @@ void preprocessImage(cv::Mat frame ,float * gpu_input,const nvinfer1::Dims &dims
     cv::cuda::GpuMat flt_image;
     gpu_frame.convertTo(flt_image,CV_32FC3,1.0f/255.0f);
 
-    cv::cuda::subtract(flt_image, cv::Scalar(0.485f, 0.456f, 0.406f), flt_image, cv::noArray(), -1);
-    cv::cuda::divide(flt_image, cv::Scalar(0.229f, 0.224f, 0.225f), flt_image, 1, -1);
+    // cv::cuda::subtract(flt_image, cv::Scalar(0.485f, 0.456f, 0.406f), flt_image, cv::noArray(), -1);
+    // cv::cuda::divide(flt_image, cv::Scalar(0.229f, 0.224f, 0.225f), flt_image, 1, -1);
 
     // to tensor is doing by this way and very important
 
@@ -153,16 +153,23 @@ void postprocessResults(float * gpu_output,const nvinfer1::Dims &dims, int batch
 
     vector<float> cpu_output(getSizeByDim(dims)*batch_size);
     cudaMemcpy(cpu_output.data(),gpu_output,cpu_output.size()*sizeof(float),cudaMemcpyDeviceToHost);
-    cout<<"size : "<<cpu_output.size()<<endl;
-    // compute SoftMax 
-    std::transform(cpu_output.begin(), cpu_output.end(), cpu_output.begin(), [](float val){return std::exp(val);});
-    auto sum = std::accumulate(cpu_output.begin(),cpu_output.end(),0.0);
-    // std::cout<<"sum: "<<sum<< std::endl;
+    std::ofstream out_file{"fm.txt"};
+    for (const auto &v :cpu_output)
+            out_file << v << std::endl;
 
-     // find top classes predicted by the model
-    std::vector<int> indices(getSizeByDim(dims) * batch_size);
-    std::iota(indices.begin(), indices.end(), 0); // generate sequence 0, 1, 2, 3, ..., 999
-    std::sort(indices.begin(), indices.end(), [&cpu_output](int i1, int i2) {return cpu_output[i1] > cpu_output[i2];});
+    out_file.close();
+
+    cout<<"size : "<<cpu_output.size()<<endl;
+
+    // compute SoftMax 
+    // std::transform(cpu_output.begin(), cpu_output.end(), cpu_output.begin(), [](float val){return std::exp(val);});
+    // auto sum = std::accumulate(cpu_output.begin(),cpu_output.end(),0.0);
+    // // std::cout<<"sum: "<<sum<< std::endl;
+
+    //  // find top classes predicted by the model
+    // std::vector<int> indices(getSizeByDim(dims) * batch_size);
+    // std::iota(indices.begin(), indices.end(), 0); // generate sequence 0, 1, 2, 3, ..., 999
+    // std::sort(indices.begin(), indices.end(), [&cpu_output](int i1, int i2) {return cpu_output[i1] > cpu_output[i2];});
     // print results
     int i = 0;
     // while (cpu_output[indices[i]] / sum > 0.005)
@@ -180,14 +187,14 @@ void postprocessResults(float * gpu_output,const nvinfer1::Dims &dims, int batch
 
 int main(int argc, const char ** argv) 
 {
-    if (argc < 3)
+    if (argc < 2)
     {
         std::cerr<<"usage: " << argv[0] << " model.onnx image.jpg"<<std::endl;
         return -1;
     }
 
     string model_path = argv[1];
-    string image_path = argv[2];
+    // string image_path = argv[2];
     const int batch_size = 1;
 
     unique_ptr<nvinfer1::ICudaEngine,TRTDestroy> engine{nullptr};
@@ -224,10 +231,10 @@ int main(int argc, const char ** argv)
 
     std::cout<<"size of input_dims: "<<input_dims.size()<<std::endl;
     std::cout<<"size of input_dims: "<<output_dims.size()<<std::endl;
-    #define INPUT_H 289
-    #define INPUT_W 289
+    #define INPUT_H 299
+    #define INPUT_W 299
 
-    static float data[1 * 3 * 289 * 289];
+    static float data[1 * 3 * 299 * 299];
     
     // cv::Mat frame = cv::imread(image_path);
     // if (frame.empty())
@@ -236,14 +243,17 @@ int main(int argc, const char ** argv)
     //     return 0;
     // }
     
-    cv::Mat img = cv::imread(image_path);
-    auto input_size = cv::Size(INPUT_W,INPUT_H);
+    // cv::Mat img = cv::imread(image_path);
+    // auto input_size = cv::Size(INPUT_W,INPUT_H);
     auto start = std::chrono::system_clock::now();
-    cv::resize(img, img, input_size, 0, 0, cv::INTER_LINEAR);
+    // cv::resize(img, img, input_size, 0, 0, cv::INTER_LINEAR);
     for (int i = 0; i < INPUT_H * INPUT_W; i++) {
-        data[i] = ((float)img.at<cv::Vec3b>(i)[2] - 127.5) * 0.0078125;
-        data[i + INPUT_H * INPUT_W] = ((float)img.at<cv::Vec3b>(i)[1] - 127.5) * 0.0078125;
-        data[i + 2 * INPUT_H * INPUT_W] = ((float)img.at<cv::Vec3b>(i)[0] - 127.5) * 0.0078125;
+        data[i] =1.0;
+        data[i + INPUT_H * INPUT_W] = 1.0;
+        data[i + 2 * INPUT_H * INPUT_W] = 1.0;
+        // data[i] = ((float)img.at<cv::Vec3b>(i)[2] - 127.5) * 0.0078125;
+        // data[i + INPUT_H * INPUT_W] = ((float)img.at<cv::Vec3b>(i)[1] - 127.5) * 0.0078125;
+        // data[i + 2 * INPUT_H * INPUT_W] = ((float)img.at<cv::Vec3b>(i)[0] - 127.5) * 0.0078125;
     }
 
     float fg_bg[INPUT_H * INPUT_W];
@@ -295,6 +305,8 @@ int main(int argc, const char ** argv)
     
     // context->execute(batch_size,buffers.data());
     // context->execute(bat)
+
+    
     postprocessResults((float *) buffers[2], output_dims[0], batch_size);
 
     for (void * buf : buffers)

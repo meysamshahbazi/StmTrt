@@ -54,22 +54,22 @@ size_t getSizeByDim(const nvinfer1::Dims& dims)
 }
 
 
-std::vector<std::string> getClassNames(const std::string& imagenet_classes)
-{
-    std::ifstream classes_file(imagenet_classes);
-    std::vector<std::string> classes;
-    if (!classes_file.good())
-    {
-        std::cerr << "ERROR: can't read file with classes names.\n";
-        return classes;
-    }
-    std::string class_name;
-    while (std::getline(classes_file, class_name))
-    {
-        classes.push_back(class_name);
-    }
-    return classes;
-}
+// std::vector<std::string> getClassNames(const std::string& imagenet_classes)
+// {
+//     std::ifstream classes_file(imagenet_classes);
+//     std::vector<std::string> classes;
+//     if (!classes_file.good())
+//     {
+//         std::cerr << "ERROR: can't read file with classes names.\n";
+//         return classes;
+//     }
+//     std::string class_name;
+//     while (std::getline(classes_file, class_name))
+//     {
+//         classes.push_back(class_name);
+//     }
+//     return classes;
+// }
 
 //   preprocessImage(frame,(float *)buffers[0],input_dims[0]);
 // void preprocessImage(const string &image_path,float * gpu_input,const nvinfer1::Dims &dims)
@@ -96,6 +96,7 @@ void preprocessImage(cv::Mat frame ,float * gpu_input,const nvinfer1::Dims &dims
     // cv::cuda::resize(gpu_frame, resized, input_size, 0, 0, cv::INTER_NEAREST,cvstream);
 
     cv::cuda::GpuMat flt_image;
+    gpu_frame.convertTo(flt_image,CV_32FC3);
     gpu_frame.convertTo(flt_image,CV_32FC3,1.0f/255.0f);
 
     cv::cuda::subtract(flt_image, cv::Scalar(0.485f, 0.456f, 0.406f), flt_image, cv::noArray(), -1);
@@ -225,7 +226,7 @@ int main(int argc, const char ** argv)
     for (int i = 0; i < FM_SIZE; i++)
         fm[i] = 1.0;
  
-    #define FQ_SIZE 512*25* 25
+    #define FQ_SIZE 512*25*25
     float *fq;
     fq = (float *)malloc(FQ_SIZE*sizeof(float));
     for (int i = 0; i < FQ_SIZE; i++)
@@ -263,9 +264,10 @@ int main(int argc, const char ** argv)
     
     // // context->execute(batch_size,buffers.data());
     // // context->execute(bat)
-    postprocessResults((float *) buffers[2], output_dims[0], batch_size,"cls_score");
-    postprocessResults((float *) buffers[3], output_dims[1], batch_size,"ctr_score");
-    postprocessResults((float *) buffers[4], output_dims[2], batch_size,"offsets");
+    postprocessResults((float *) buffers[2], output_dims[0], batch_size,"fcos_bbox_final");
+    postprocessResults((float *) buffers[3], output_dims[1], batch_size,"fcos_cls_prob_final");
+    postprocessResults((float *) buffers[4], output_dims[2], batch_size,"fcos_ctr_prob_final");
+    postprocessResults((float *) buffers[5], output_dims[3], batch_size,"fcos_score_final");
 
     for (void * buf : buffers)
     {

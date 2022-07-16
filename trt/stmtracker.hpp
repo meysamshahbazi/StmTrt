@@ -19,8 +19,9 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-
+#include <algorithm>
 #include "utils.hpp"
+#include <opencv2/core/types.hpp>
 
 using namespace std;
 using namespace cv;
@@ -55,6 +56,8 @@ private:
     
     int im_h;
     int im_w;
+    int min_w{10};
+    int min_h{10};
 
     const int score_size{25};
     Mat window;
@@ -64,21 +67,37 @@ private:
     std::vector<float> pscores;
     int cur_frame_idx {0};
     const float search_area_factor {4.0};
-    const float q_size{289.0};
+    const int q_size{289};
+    const int m_size{289};
     float target_scale;
     Size2f base_target_sz;
 
+    float window_influence{0.21};
+
     Point2f target_pos_prior;
     Size2f target_sz_prior;
-    
+
+    const int num_segments=4;
+    float scale_q;
+    float penalty_k=0.04;
+
+    float test_lr{0.95};
+
+    vector<int> select_representatives(int cur_frame_idx);
+    void _postprocess_score(vector<float> score,vector<vector<float>> box_wh,vector<float> &pscore,vector<float> &penalty);
+    float change(float r);
+    float sz(float w,float h);
+    void _postprocess_box(float score_best,vector<float> box_best,float penalty_best,Point2f &new_target_pos,Size2f &new_target_sz);
+
 
 public:
     stmtracker(/* args */);
     ~stmtracker();
     void init(Mat im, Rect2f state);
-    Rect update(Mat im);
+    Rect2f update(Mat im);
     void memorize();
-    void get_crop_single(const Mat &im,Point2f target_pos,float target_scale, // all input 
+    void track(Mat im,vector<void *> &features,Point2f &new_target_pos, Size2f &new_target_sz);
+    void get_crop_single(Mat &im,Point2f target_pos,float target_scale, // all input 
                         int output_sz, Scalar avg_chans, // all input 
                         Mat &im_patch, float &real_scale); // these are output 
     

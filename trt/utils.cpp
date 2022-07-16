@@ -82,3 +82,35 @@ void parseOnnxModel(const string & model_path,
     return;
 }
 
+void postprocessResults(float * gpu_output,const nvinfer1::Dims &dims, int batch_size, std::string file_name)
+{
+    // auto classes = getClassNames("../imagenet_classes.txt");
+
+    vector<float> cpu_output(getSizeByDim(dims)*batch_size);
+    cudaMemcpy(cpu_output.data(),gpu_output,cpu_output.size()*sizeof(float),cudaMemcpyDeviceToHost);
+    cout<<"size : "<<cpu_output.size()<<endl;
+
+    std::ofstream out_file{file_name + ".txt"};
+    for (const auto &v :cpu_output)
+            out_file << v << std::endl;
+
+    out_file.close();
+
+
+}
+
+std::vector<vector<float>> xyxy2cxywh(const std::vector<float> & box)
+{
+    std::vector<vector<float>> box_wh;
+    for(int i = 0;i < 625; i++)
+    {
+        float cx = (box[4*i+0]+box[4*i+2])/2;
+        float cy = (box[4*i+1]+box[4*i+3])/2;
+        float w = box[4*i+2]-box[4*i+0]+1;
+        float h = box[4*i+3]-box[4*i+1]+1;
+        box_wh.push_back({cx,cy,w,h});
+    } 
+    return box_wh;
+}
+
+

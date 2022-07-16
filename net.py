@@ -671,12 +671,13 @@ class STMHead(nn.Module):
         fm0 = fm.clone()
         fq0 = fq.clone()
 
-        fm = fm.view(B, C, T * H * W)  # B, C, THW
+        # fm = fm.view(B, C, T * H * W)  # B, C, THW
+        fm = fm.reshape(B, C, T * H * W)
         fm = torch.transpose(fm, 1, 2)  # B, THW, C
         fq = fq.view(B, C, H * W)  # B, C, HW
 
-        w = torch.bmm(fm, fq) / math.sqrt(C)  # B, THW, HW
-        w = torch.bmm(fm, fq) / math.sqrt(512)
+        # w = torch.bmm(fm, fq) / math.sqrt(C)  # B, THW, HW
+        w = torch.bmm(fm, fq) / math.sqrt(512.0)
         w = torch.softmax(w, dim=1)
 
         fm1 = fm0.view(B, C, T * H * W)  # B, C, THW
@@ -710,15 +711,18 @@ class STMHead(nn.Module):
         offsets = torch.exp(self.si * offsets + self.bi) * self.total_stride
 
         # bbox decoding
-        if self.default_hyper_params["input_size_adapt"] and q_size > 0:
-            score_offset = (q_size - 1 - (offsets.size(-1) - 1) * self.total_stride) // 2
-            fm_ctr = get_xy_ctr_np(offsets.size(-1), score_offset, self.total_stride)
-            fm_ctr = fm_ctr.to(offsets.device)
-        else:
-            fm_ctr = self.fm_ctr.to(offsets.device)
+        # MeySha: we comment this becuse of wed dont have input_size_adapt
+        # if self.default_hyper_params["input_size_adapt"] and q_size > 0:
+        #     score_offset = (q_size - 1 - (offsets.size(-1) - 1) * self.total_stride) // 2
+        #     fm_ctr = get_xy_ctr_np(offsets.size(-1), score_offset, self.total_stride)
+        #     fm_ctr = fm_ctr.to(offsets.device)
+        # else:
+        #     fm_ctr = self.fm_ctr.to(offsets.device)
+
+        fm_ctr = self.fm_ctr.to(offsets.device)
         bbox = get_box(fm_ctr, offsets)
         # print(bbox.shape)
-        return [cls_score, ctr_score, bbox]
+        return cls_score, ctr_score, bbox
 
     def update_params(self):
         # super().update_params()
@@ -868,6 +872,8 @@ class STMTrack(nn.Module):
             search_img, fm = args
             fq = self.basemodel_q(search_img)
             fq = self.neck_q(fq)  # B, C, H, W
+
+            # print("fm size: ",fm.shape)
 
             fcos_cls_score_final, fcos_ctr_score_final, fcos_bbox_final = self.head(
                 fm, fq, search_img.size(-1))

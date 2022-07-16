@@ -119,11 +119,12 @@ class STMTrackTracker():
 
         dur = cur_frame_idx // num_segments
         indexes = np.concatenate([
-            np.array([1]),
+            np.array([0]),
             np.array(list(range(num_segments))) * dur + dur // 2 + 1
         ])
         if self._state['pscores'][-1] > self._hp_confidence_threshold:
-            indexes = np.append(indexes, 0)
+            # indexes = np.append(indexes, 0)
+            indexes = np.append(indexes,cur_frame_idx-1)
         indexes = np.unique(indexes)
 
         representatives = []
@@ -131,10 +132,12 @@ class STMTrackTracker():
             fm = self._state['all_memory_frame_feats'][idx - 1]
             if not fm.is_cuda:
                 fm = fm.to(self.device)
+            # print(fm.shape)
             representatives.append(fm)
 
         assert len(representatives[0].shape) == 5
         representatives = torch.cat(representatives, dim=2)
+        # print("dim: ",representatives.shape)
         return representatives
 
     def init(self, im, state):
@@ -214,7 +217,7 @@ class STMTrackTracker():
         #     score1 = tensor_to_numpy(score[0])[:, 0]
         #     vsm.visualize(score1, self._hp_score_size, im_q_crop, self._state['cur_frame_idx'], 'raw_score')
         # print("befor ",box.shape)
-        box = tensor_to_numpy(box[0])
+        box = tensor_to_numpy(box[0]) # 1,625,4 -> 625,4
         # print("after ",box.shape)
         score = tensor_to_numpy(score[0])[:, 0]
         cls = tensor_to_numpy(cls[0])
@@ -346,13 +349,18 @@ class STMTrackTracker():
         # size penalty
         penalty_k = self.default_hyper_params['penalty_k']
         target_sz_in_crop = target_sz * scale_x
+        
         s_c = change(
             sz(box_wh[:, 2], box_wh[:, 3]) /
             (sz_wh(target_sz_in_crop)))  # scale penalty
         r_c = change((target_sz_in_crop[0] / target_sz_in_crop[1]) /
                      (box_wh[:, 2] / box_wh[:, 3]))  # ratio penalty
+
+        
         penalty = np.exp(-(r_c * s_c - 1) * penalty_k)
         pscore = penalty * score
+        # print("pscore ",pscore.shape)
+        # print("self._state['window']  ",self._state['window'] .shape)
         # if self._hp_visualization:
         #     vsm.visualize(pscore, self._hp_score_size, im_x_crop, self._state['cur_frame_idx'], 'pscore_0')
 
@@ -383,6 +391,7 @@ class STMTrackTracker():
             new_target_sz: (2, ), new target size
         """
         pred_in_crop = box_wh[best_pscore_id, :] / np.float32(scale_x)
+        # print("pred_in_crop ",pred_in_crop)
         # about np.float32(scale_x)
         # attention!, this casting is done implicitly
         # which can influence final EAO heavily given a model & a set of hyper-parameters
@@ -390,11 +399,12 @@ class STMTrackTracker():
         # box post-postprocessing
         test_lr = self.default_hyper_params['test_lr']
         lr = penalty[best_pscore_id] * score[best_pscore_id] * test_lr
+        # print(lr)
         res_x = pred_in_crop[0] + target_pos[0] - (x_size // 2) / scale_x
         res_y = pred_in_crop[1] + target_pos[1] - (x_size // 2) / scale_x
         res_w = target_sz[0] * (1 - lr) + pred_in_crop[2] * lr
         res_h = target_sz[1] * (1 - lr) + pred_in_crop[3] * lr
-
+        # print("res_x: ",res_x," res_y ",res_y," res_w ",res_w," res_h ",res_h)
         new_target_pos = np.array([res_x, res_y])
         new_target_sz = np.array([res_w, res_h])
 
