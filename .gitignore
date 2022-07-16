@@ -5,4 +5,5 @@ __pycache__/*
 *.onnx
 trt/build/*
 test_trt/*
+*.ipynb
 
