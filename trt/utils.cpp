@@ -89,9 +89,11 @@ void parseEngineModel(const string & engine_file_path,
     Logger logger;
     char *trtModelStream{nullptr};
     size_t size{0};
-    
+
     std::ifstream file(engine_file_path, std::ios::binary);
-    if (file.good()) {
+    
+    if (file.good()) 
+    {
         file.seekg(0, file.end);
         size = file.tellg();
         file.seekg(0, file.beg);

@@ -5,12 +5,12 @@
 stmtracker::stmtracker(/* args */)
 {
     
-    parseOnnxModel(model_path_base_q,engine_base_q,context_base_q);
-    // const string  engine_path_base_q{"../../backbone_q.engine"};
-    // parseEngineModel(engine_path_base_q,engine_base_q,context_base_q);
-    parseOnnxModel(model_path_base_m,engine_base_m,context_base_m);
-    // const string  engine_path_base_m{"../../memorize.engine"};
-    // parseEngineModel(engine_path_base_m,engine_base_m,context_base_m);
+    // parseOnnxModel(model_path_base_q,engine_base_q,context_base_q);
+    const string  engine_path_base_q{"../../backbone_q.engine"};
+    parseEngineModel(engine_path_base_q,engine_base_q,context_base_q);
+    // parseOnnxModel(model_path_base_m,engine_base_m,context_base_m);
+    const string  engine_path_base_m{"../../memorize.engine"};
+    parseEngineModel(engine_path_base_m,engine_base_m,context_base_m);
     
     parseOnnxModel(model_path_head,engine_head,context_head);
 
