@@ -6,12 +6,19 @@ stmtracker::stmtracker(/* args */)
 {
     
     parseOnnxModel(model_path_base_q,engine_base_q,context_base_q);
+    // const string  engine_path_base_q{"../../backbone_q.engine"};
+    // parseEngineModel(engine_path_base_q,engine_base_q,context_base_q);
     parseOnnxModel(model_path_base_m,engine_base_m,context_base_m);
+    // const string  engine_path_base_m{"../../memorize.engine"};
+    // parseEngineModel(engine_path_base_m,engine_base_m,context_base_m);
+    
     parseOnnxModel(model_path_head,engine_head,context_head);
 
     buffers_base_q.reserve(engine_base_q->getNbBindings());
     buffers_base_m.reserve(engine_base_m->getNbBindings());
     buffers_head.reserve(engine_head->getNbBindings());
+
+    
     cout<<"------------------------------"<<endl;
     for (size_t i = 0; i < engine_base_q->getNbBindings(); ++i)
     {
@@ -52,7 +59,6 @@ stmtracker::stmtracker(/* args */)
         std::cout<<engine_head->getBindingName(i)<<std::endl;
         if (engine_head->bindingIsInput(i))
         {
-            
             input_dims_head.emplace_back(engine_head->getBindingDimensions(i));
         }
         else
@@ -60,8 +66,6 @@ stmtracker::stmtracker(/* args */)
             output_dims_head.emplace_back(engine_head->getBindingDimensions(i));
         }
     }
-    
-
 }
 
 void stmtracker::init(Mat im, Rect2f state)
@@ -80,8 +84,6 @@ void stmtracker::init(Mat im, Rect2f state)
     float search_area = search_area_factor*search_area_factor*target_sz.area();
     target_scale = std::sqrt(search_area)/q_size;
     base_target_sz = target_sz/target_scale;
-
-
     return;
 }
 
@@ -143,7 +145,8 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
     }
     
     cudaMemcpy(buffers_base_q[0], data, batch_size * 3 * q_size * q_size * sizeof(float), cudaMemcpyHostToDevice);
-    context_base_q->enqueue(batch_size,buffers_base_q.data(),0,nullptr);
+    // context_base_q->enqueue(batch_size,buffers_base_q.data(),0,nullptr);
+    context_base_q->enqueueV2(buffers_base_q.data(),0,nullptr);
 
 
     // for debug
@@ -190,7 +193,8 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
     }
     // buffers_head
     // std::cout<<"Im here"<<endl;
-    context_head->enqueue(batch_size,buffers_head.data(),0,nullptr);
+    // context_head->enqueue(batch_size,buffers_head.data(),0,nullptr);
+    context_head->enqueueV2(buffers_head.data(),0,nullptr);
 
     // postprocessResults((float *) buffers_head[2], output_dims_head[0], batch_size,"fcos_score_final");
     // postprocessResults((float *) buffers_head[3], output_dims_head[1], batch_size,"fcos_bbox_final");
@@ -380,7 +384,8 @@ void stmtracker::memorize()
 
     cudaMemcpy(buffers_base_m[0], data, batch_size * 3 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(buffers_base_m[1], fg_bg_label_map, batch_size * 1 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice);
-    context_base_m->enqueue(batch_size,buffers_base_m.data(),0,nullptr);
+    // context_base_m->enqueue(batch_size,buffers_base_m.data(),0,nullptr);
+    context_base_m->enqueueV2(buffers_base_m.data(),0,nullptr);
     void * temp_ptr;
     cudaMalloc(&temp_ptr, getSizeByDim(output_dims_base_m[0])* sizeof(float));
     cudaMemcpy(temp_ptr,(float *) buffers_base_m[2],getSizeByDim(output_dims_base_m[0])*sizeof(float),cudaMemcpyDeviceToDevice);

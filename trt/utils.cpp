@@ -82,6 +82,36 @@ void parseOnnxModel(const string & model_path,
     return;
 }
 
+void parseEngineModel(const string & engine_file_path,
+                    unique_ptr<nvinfer1::ICudaEngine,TRTDestroy> &engine,
+                    unique_ptr<nvinfer1::IExecutionContext,TRTDestroy> &context)
+{
+    Logger logger;
+    char *trtModelStream{nullptr};
+    size_t size{0};
+    
+    std::ifstream file(engine_file_path, std::ios::binary);
+    if (file.good()) {
+        file.seekg(0, file.end);
+        size = file.tellg();
+        file.seekg(0, file.beg);
+        trtModelStream = new char[size];
+        assert(trtModelStream);
+        file.read(trtModelStream, size);
+        file.close();
+    }
+
+    nvinfer1::IRuntime* runtime = nvinfer1::createInferRuntime(logger);
+    assert(runtime != nullptr);
+    // ICudaEngine* engine = runtime->deserializeCudaEngine(trtModelStream, size);
+    engine.reset(runtime->deserializeCudaEngine(trtModelStream, size));
+    assert(engine != nullptr); 
+    context.reset(engine->createExecutionContext());
+    assert(context != nullptr);
+    delete[] trtModelStream;
+    return;
+}                    
+
 void postprocessResults(float * gpu_output,const nvinfer1::Dims &dims, int batch_size, std::string file_name)
 {
     // auto classes = getClassNames("../imagenet_classes.txt");
