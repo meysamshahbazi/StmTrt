@@ -6,4 +6,5 @@ __pycache__/*
 trt/build/*
 test_trt/*
 *.ipynb
-
+*.engine
+*.pth
