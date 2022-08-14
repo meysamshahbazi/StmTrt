@@ -66,6 +66,9 @@ stmtracker::stmtracker(/* args */)
             output_dims_head.emplace_back(engine_head->getBindingDimensions(i));
         }
     }
+
+    
+    cudaStreamCreate(&stream_m);
 }
 
 void stmtracker::init(Mat im, Rect2f state)
@@ -89,6 +92,7 @@ void stmtracker::init(Mat im, Rect2f state)
 
 Rect2f stmtracker::update(Mat im)
 {
+    //  
     auto start = std::chrono::system_clock::now();
     target_pos_prior = target_pos;
     target_sz_prior = target_sz;
@@ -123,9 +127,7 @@ Rect2f stmtracker::update(Mat im)
     cur_frame_idx ++;
 
     auto end = std::chrono::system_clock::now();
-    // std::cout << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << "us" << std::endl;
-
-    // std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+    std::cout <<"update " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
     
     return track_rect;
     
@@ -133,33 +135,46 @@ Rect2f stmtracker::update(Mat im)
 void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos, Size2f &new_target_sz)
 {
     Mat im_q_crop;
-
+   
     get_crop_single(im_q,target_pos_prior,target_scale,q_size,avg_chans,im_q_crop,scale_q);
+    
     float data[1 * 3 * q_size * q_size];
-    for (int i = 0; i < q_size * q_size; i++) 
+    int data_idx = 0;
+    
+    for (int i = 0; i < im_q_crop.rows; ++i)
     {
-        // im not complete sure about normalization and even order of channales
-        data[i] = (float)im_q_crop.at<cv::Vec3b>(i)[0];
-        data[i+q_size * q_size] =  (float)im_q_crop.at<cv::Vec3b>(i)[1];
-        data[i+2*q_size * q_size] =  (float)im_q_crop.at<cv::Vec3b>(i)[2];
+        cv::Vec3b* pixel = im_q_crop.ptr<cv::Vec3b>(i); // point to first pixel in row
+        for (int j = 0; j < im_q_crop.cols; ++j)
+        {
+            data[data_idx] = pixel[j][0];
+            data[data_idx+m_size * m_size]  = pixel[j][1];
+            data[data_idx+2*m_size * m_size] = pixel[j][2]; 
+            data_idx++;
+        }
     }
+   
+    // for (int i = 0; i < q_size * q_size; i++) 
+    // {
+    //     // im not complete sure about normalization and even order of channales
+    //     data[i] = (float)im_q_crop.at<cv::Vec3b>(i)[0];
+    //     data[i+q_size * q_size] =  (float)im_q_crop.at<cv::Vec3b>(i)[1];
+    //     data[i+2*q_size * q_size] =  (float)im_q_crop.at<cv::Vec3b>(i)[2];
+    // }
+    
     
     cudaMemcpy(buffers_base_q[0], data, batch_size * 3 * q_size * q_size * sizeof(float), cudaMemcpyHostToDevice);
     // context_base_q->enqueue(batch_size,buffers_base_q.data(),0,nullptr);
     context_base_q->enqueueV2(buffers_base_q.data(),0,nullptr);
-
-
+    // context_base_q->executeV2(buffers_base_q.data());
     // for debug
-    
-
-
     // end of debug 
     // now buffers_base_q[1] contains fq
     #define FQ_SIZE 512*25*25
+    
     cudaMemcpy(buffers_head[1],buffers_base_q[1],batch_size*FQ_SIZE*sizeof(float),cudaMemcpyDeviceToDevice);
     
     int mem_step = score_size*score_size;
-    
+    auto start = std::chrono::system_clock::now();
     for (int i = 0;i <512;i++)
     {
         for (int j = 0;j <6;j++)
@@ -171,29 +186,16 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
             cudaMemcpy( (void *) dst,
                         (void *) src,
                         batch_size*mem_step*sizeof(float),cudaMemcpyDeviceToDevice);
-
-            // cudaMemcpy((void*) &buffers_head[0][(6*i+j)*mem_step],(void *)&features[j][i*mem_step],
-            //             batch_size*mem_step*sizeof(float),cudaMemcpyDeviceToDevice);
         }
-        // cudaMemcpy( buffers_head[0]+i*mem_step,features[1]+i*mem_step,
-        //             batch_size*mem_step*sizeof(float),cudaMemcpyDeviceToDevice);
-
-        // cudaMemcpy( buffers_head[0]+i*mem_step,features[2]+i*mem_step,
-        //             batch_size*mem_step*sizeof(float),cudaMemcpyDeviceToDevice);
-
-        // cudaMemcpy( buffers_head[0]+i*mem_step,features[3]+i*mem_step,
-        //             batch_size*mem_step*sizeof(float),cudaMemcpyDeviceToDevice);
-
-        // cudaMemcpy( buffers_head[0]+i*mem_step,features[4]+i*mem_step,
-        //             batch_size*mem_step*sizeof(float),cudaMemcpyDeviceToDevice);
-                    
-        // cudaMemcpy( buffers_head[0]+i*mem_step,features[5]+i*mem_step,
-        //             batch_size*mem_step*sizeof(float),cudaMemcpyDeviceToDevice);
-
     }
+    auto end = std::chrono::system_clock::now();
+    std::cout <<"memcpy " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+
+   
     // buffers_head
     // std::cout<<"Im here"<<endl;
     // context_head->enqueue(batch_size,buffers_head.data(),0,nullptr);
+    
     context_head->enqueueV2(buffers_head.data(),0,nullptr);
 
     // postprocessResults((float *) buffers_head[2], output_dims_head[0], batch_size,"fcos_score_final");
@@ -204,19 +206,21 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
     vector<float> box(getSizeByDim(output_dims_head[0])*batch_size);
     cudaMemcpy(box.data(), buffers_head[2],box.size()*sizeof(float),cudaMemcpyDeviceToHost);
 
-    vector<float> cls(getSizeByDim(output_dims_head[1])*batch_size);
-    cudaMemcpy(cls.data(), buffers_head[3],cls.size()*sizeof(float),cudaMemcpyDeviceToHost);
+    // vector<float> cls(getSizeByDim(output_dims_head[1])*batch_size);
+    // cudaMemcpy(cls.data(), buffers_head[3],cls.size()*sizeof(float),cudaMemcpyDeviceToHost);
 
-    vector<float> ctr(getSizeByDim(output_dims_head[2])*batch_size);
-    cudaMemcpy(ctr.data(), buffers_head[4],ctr.size()*sizeof(float),cudaMemcpyDeviceToHost);
+    // vector<float> ctr(getSizeByDim(output_dims_head[2])*batch_size);
+    // cudaMemcpy(ctr.data(), buffers_head[4],ctr.size()*sizeof(float),cudaMemcpyDeviceToHost);
 
-    vector<float> score(getSizeByDim(output_dims_head[3])*batch_size);
-    cudaMemcpy(score.data(), buffers_head[5],score.size()*sizeof(float),cudaMemcpyDeviceToHost);
+    vector<float> score(getSizeByDim(output_dims_head[1])*batch_size);
+    cudaMemcpy(score.data(), buffers_head[3],score.size()*sizeof(float),cudaMemcpyDeviceToHost);
 
-    // for (auto c : score)
-    //     cout << c << ", ";
-    
-    // cout <<endl;
+
+    // vector<float> tempp(getSizeByDim(output_dims_head[2])*batch_size);
+    // cudaMemcpy(tempp.data(), buffers_head[3],tempp.size()*sizeof(float),cudaMemcpyDeviceToHost);
+
+
+  
 
     vector<vector<float>> box_wh = xyxy2cxywh(box);
 
@@ -245,12 +249,6 @@ void stmtracker::_postprocess_box(float score_best,vector<float> box_best,float 
                                     box_best[3]/scale_q
                                     };
 
-    // cout<<pred_in_crop<<endl;
-    
-    // for(auto c: pred_in_crop)
-    //     cout<<c<<" ";
-    // cout<<endl;
-
     float lr = penalty_best*score_best*test_lr;
     // cout<<lr<<endl;
     float res_x = pred_in_crop[0] + target_pos_prior.x - (q_size/2)/scale_q;
@@ -270,8 +268,6 @@ void stmtracker::_postprocess_box(float score_best,vector<float> box_best,float 
 
     new_target_pos = Point2f(res_x,res_y);
     new_target_sz = Size2f(res_w,res_h);
-
-
 
 }
 
@@ -353,18 +349,20 @@ void stmtracker::memorize()
     float real_scale;
     float data[1 * 3 * m_size * m_size];
     get_crop_single(last_img,target_pos,scale_m,m_size,avg_chans,im_m_crop,real_scale);
-    for (int i = 0; i < m_size * m_size; i++) {
-        // im not complete sure about normalization and even order of channales
-        data[i] =  (float)im_m_crop.at<cv::Vec3b>(i)[0] ;
-        data[i+m_size * m_size] =  (float)im_m_crop.at<cv::Vec3b>(i)[1] ;
-        data[i+2*m_size * m_size] =  (float)im_m_crop.at<cv::Vec3b>(i)[2] ;
-        // data[i] = ((float)im_m_crop.at<cv::Vec3b>(i)[2] - 127.5) * 0.0078125;
-        // data[i + m_size * m_size] = ((float)im_m_crop.at<cv::Vec3b>(i)[1] - 127.5) * 0.0078125;
-        // data[i + 2 * m_size * m_size] = ((float)im_m_crop.at<cv::Vec3b>(i)[1] - 127.5) * 0.0078125;
+
+    int data_idx = 0;
+    for (int i = 0; i < im_m_crop.rows; ++i)
+    {
+        cv::Vec3b* pixel = im_m_crop.ptr<cv::Vec3b>(i); // point to first pixel in row
+        for (int j = 0; j < im_m_crop.cols; ++j)
+        {
+            data[data_idx] = pixel[j][0];
+            data[data_idx+m_size * m_size]  = pixel[j][1];
+            data[data_idx+2*m_size * m_size] = pixel[j][2]; 
+            data_idx++;
+        }
     }
 
-
-    
     int x1 = (m_size-1)/2 - target_sz_prior.width*real_scale/2;
     int y1 = (m_size-1)/2 - target_sz_prior.height*real_scale/2;
     int x2 = (m_size-1)/2 + target_sz_prior.width*real_scale/2;
@@ -380,26 +378,25 @@ void stmtracker::memorize()
                 fg_bg_label_map[m_size*i+j ] = 0.0;
         }
 
-
-
-    cudaMemcpy(buffers_base_m[0], data, batch_size * 3 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(buffers_base_m[1], fg_bg_label_map, batch_size * 1 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice);
+    // cudaMemcpy(buffers_base_m[0], data, batch_size * 3 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice);
+    // cudaStream_t stream_m;
+    // cudaStreamCreate(&stream_m);
+    cudaMemcpyAsync(buffers_base_m[0], data, batch_size * 3 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice,stream_m);
+    // cudaMemcpy(buffers_base_m[1], fg_bg_label_map, batch_size * 1 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpyAsync(buffers_base_m[1], fg_bg_label_map, batch_size * 1 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice,stream_m);
     // context_base_m->enqueue(batch_size,buffers_base_m.data(),0,nullptr);
-    context_base_m->enqueueV2(buffers_base_m.data(),0,nullptr);
+    context_base_m->enqueueV2(buffers_base_m.data(),stream_m,nullptr);
+    // context_base_m->executeV2(buffers_base_m.data());
     void * temp_ptr;
+    // cudaMalloc(&temp_ptr, getSizeByDim(output_dims_base_m[0])* sizeof(float));
+
     cudaMalloc(&temp_ptr, getSizeByDim(output_dims_base_m[0])* sizeof(float));
-    cudaMemcpy(temp_ptr,(float *) buffers_base_m[2],getSizeByDim(output_dims_base_m[0])*sizeof(float),cudaMemcpyDeviceToDevice);
+    cudaMemcpyAsync(temp_ptr,(float *) buffers_base_m[2],getSizeByDim(output_dims_base_m[0])*sizeof(float),cudaMemcpyDeviceToDevice,stream_m);
+    // cudaMemcpyAsync(temp_ptr,(float *) buffers_base_m[2],getSizeByDim(output_dims_base_m[0])*sizeof(float),cudaMemcpyDeviceToDevice);
+
     all_memory_frame_feats.push_back(temp_ptr);
-    /// these blocks are just for test  
-    // vector<float> cpu_output(getSizeByDim(output_dims_base_m[0])*batch_size);
-    // cudaMemcpy(cpu_output.data(),(float *) buffers_base_m[2],cpu_output.size()*sizeof(float),cudaMemcpyDeviceToHost);
-    // cout<<"size : "<<cpu_output.size()<<endl;
 
-    // std::ofstream out_file{"fm.txt"};
-    // for (const auto &v :cpu_output)
-    //         out_file << v << std::endl;
-
-    // out_file.close();
+    //   cudaStreamDestroy(stream);
     return;
 }
 
@@ -446,21 +443,16 @@ void stmtracker::get_crop_single(Mat & im,Point2f target_pos_,
             reduced_col_sz = 0;
             for ( j = os.y*3; j < nCols;j+=3*df)
             {
-                
                 pixel_vec.push_back(p[j]);
                 pixel_vec.push_back(p[j+1]);
                 pixel_vec.push_back(p[j+2]);
                 reduced_col_sz ++;
-                // p[j] = table[p[j]];
             }
             reduced_row_sz++;
             // im_cols.push_back(im_rows);
         }
 
         im2 = cv::Mat(reduced_row_sz, reduced_col_sz, CV_8UC3,pixel_vec.data()).clone();
-
-       
-
     }
     else
     {
@@ -514,6 +506,8 @@ stmtracker::~stmtracker()
 
     for (void * buf :all_memory_frame_feats)
         cudaFree(buf);
+
+    cudaStreamDestroy(stream_m);
     
 }
 

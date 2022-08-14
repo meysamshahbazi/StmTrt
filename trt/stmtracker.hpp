@@ -29,6 +29,7 @@ using namespace cv;
 class stmtracker
 {
 private:
+    cudaStream_t stream_m;
     Logger logger;
     const string  model_path_base_q{"../../backbone_q.onnx"};
     unique_ptr<nvinfer1::ICudaEngine,TRTDestroy> engine_base_q{nullptr};
