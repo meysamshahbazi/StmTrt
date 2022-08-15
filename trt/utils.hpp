@@ -60,7 +60,7 @@ void parseOnnxModel(const string & model_path,
 void parseEngineModel(const string & engine_file_path,
                     unique_ptr<nvinfer1::ICudaEngine,TRTDestroy> &engine,
                     unique_ptr<nvinfer1::IExecutionContext,TRTDestroy> &context);
-
+void serializeOnnx2engine(std::unique_ptr<nvinfer1::ICudaEngine, TRTDestroy> &engine,const string & model_path );
 Mat get_hann_win(Size sz);
 
 void postprocessResults(float * gpu_output,const nvinfer1::Dims &dims, int batch_size, std::string file_name);

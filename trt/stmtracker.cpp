@@ -13,6 +13,9 @@ stmtracker::stmtracker(/* args */)
     parseEngineModel(engine_path_base_m,engine_base_m,context_base_m);
     
     parseOnnxModel(model_path_head,engine_head,context_head);
+    
+    // const string  head_path{"../../head.engine"};
+    // serializeOnnx2engine(engine_head,head_path);
 
     buffers_base_q.reserve(engine_base_q->getNbBindings());
     buffers_base_m.reserve(engine_base_m->getNbBindings());
@@ -153,14 +156,6 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
         }
     }
    
-    // for (int i = 0; i < q_size * q_size; i++) 
-    // {
-    //     // im not complete sure about normalization and even order of channales
-    //     data[i] = (float)im_q_crop.at<cv::Vec3b>(i)[0];
-    //     data[i+q_size * q_size] =  (float)im_q_crop.at<cv::Vec3b>(i)[1];
-    //     data[i+2*q_size * q_size] =  (float)im_q_crop.at<cv::Vec3b>(i)[2];
-    // }
-    
     
     cudaMemcpy(buffers_base_q[0], data, batch_size * 3 * q_size * q_size * sizeof(float), cudaMemcpyHostToDevice);
     // context_base_q->enqueue(batch_size,buffers_base_q.data(),0,nullptr);
@@ -175,6 +170,7 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
     
     int mem_step = score_size*score_size;
     auto start = std::chrono::system_clock::now();
+    // to do change this strange line of code into the zero copy code 
     for (int i = 0;i <512;i++)
     {
         for (int j = 0;j <6;j++)
@@ -190,18 +186,9 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
     }
     auto end = std::chrono::system_clock::now();
     std::cout <<"memcpy " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
-
-   
-    // buffers_head
-    // std::cout<<"Im here"<<endl;
-    // context_head->enqueue(batch_size,buffers_head.data(),0,nullptr);
     
     context_head->enqueueV2(buffers_head.data(),0,nullptr);
 
-    // postprocessResults((float *) buffers_head[2], output_dims_head[0], batch_size,"fcos_score_final");
-    // postprocessResults((float *) buffers_head[3], output_dims_head[1], batch_size,"fcos_bbox_final");
-    // postprocessResults((float *) buffers_head[4], output_dims_head[2], batch_size,"fcos_cls_prob_final");
-    // postprocessResults((float *) buffers_head[5], output_dims_head[3], batch_size,"fcos_ctr_prob_final");
 
     vector<float> box(getSizeByDim(output_dims_head[0])*batch_size);
     cudaMemcpy(box.data(), buffers_head[2],box.size()*sizeof(float),cudaMemcpyDeviceToHost);
@@ -219,21 +206,14 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
     // vector<float> tempp(getSizeByDim(output_dims_head[2])*batch_size);
     // cudaMemcpy(tempp.data(), buffers_head[3],tempp.size()*sizeof(float),cudaMemcpyDeviceToHost);
 
-
-  
-
     vector<vector<float>> box_wh = xyxy2cxywh(box);
 
-    
-    // best_pscore_id, pscore, penalty = self._postprocess_score(
-            // score, box_wh, target_sz, scale_q, im_q_crop)
     vector<float> pscore;
     vector<float> penalty;
     _postprocess_score(score,box_wh,pscore,penalty);
 
     auto max_pscore_it = std::max_element(pscore.begin(),pscore.end());
     int best_pscore_id = distance(pscore.begin(), max_pscore_it);
-
     
     _postprocess_box(score[best_pscore_id],box_wh[best_pscore_id],penalty[best_pscore_id],new_target_pos,new_target_sz);
 
@@ -268,9 +248,7 @@ void stmtracker::_postprocess_box(float score_best,vector<float> box_best,float 
 
     new_target_pos = Point2f(res_x,res_y);
     new_target_sz = Size2f(res_w,res_h);
-
 }
-
 
 void stmtracker::_postprocess_score(vector<float> score,vector<vector<float>> box_wh,vector<float> &pscore,vector<float> &penalty )
 {
@@ -308,8 +286,6 @@ float stmtracker::sz(float w,float h)
     float sz2 = (w+pad)*(h+pad);
     return std::sqrt(sz2);
 }
-
-
 
 vector<int> stmtracker::select_representatives(int cur_frame_idx)
 {
@@ -396,7 +372,6 @@ void stmtracker::memorize()
 
     all_memory_frame_feats.push_back(temp_ptr);
 
-    //   cudaStreamDestroy(stream);
     return;
 }
 
@@ -459,10 +434,8 @@ void stmtracker::get_crop_single(Mat & im,Point2f target_pos_,
         im2 = im;
     }
 
-
     float sz = sample_sz/df;
     
-
     int szl = std::max(static_cast<int>(std::round(sz)) ,2);
 
     Point2i tl = Point2i(posl.x-(szl-1)/2,posl.y-(szl-1)/2);
@@ -472,6 +445,7 @@ void stmtracker::get_crop_single(Mat & im,Point2f target_pos_,
     float M_23 = tl.y;
     float M_11 = (br.x-M_13)/(output_sz-1);
     float M_22 = (br.y-M_23)/(output_sz-1);
+
     float arr[2][3] = { 
                         {M_11,0,M_13},
                         {0,M_22,M_23}
@@ -479,7 +453,6 @@ void stmtracker::get_crop_single(Mat & im,Point2f target_pos_,
 
     Mat mat2x3 = Mat(2,3,CV_32FC1 ,arr);
 
-  
     cv::warpAffine( im2,
                     im_patch,
                     mat2x3,
@@ -488,11 +461,9 @@ void stmtracker::get_crop_single(Mat & im,Point2f target_pos_,
                     BORDER_CONSTANT,
                     avg_chans
     ); 	
-    real_scale = static_cast<float>(output_sz)/((br.x-tl.x+1)*df) ;
-
- 
-    
+    real_scale = static_cast<float>(output_sz)/((br.x-tl.x+1)*df) ;   
 }
+
 stmtracker::~stmtracker()
 {
     for (void * buf : buffers_base_q)

@@ -73,7 +73,7 @@ void parseOnnxModel(const string & model_path,
         config->setFlag(nvinfer1::BuilderFlag::kFP16);
     }
     // setm max bach size as it is very importannt for trt
-    builder->setMaxBatchSize(1);
+    // builder->setMaxBatchSize(1);
     // create engine and excution context
     // unique_ptr<nvinfer1::IHostMemory,TRTDestroy> serializedModel{builder->buildSerializedNetwork(*network, *config)};
     engine.reset(builder->buildEngineWithConfig(*network,*config));
@@ -112,7 +112,27 @@ void parseEngineModel(const string & engine_file_path,
     assert(context != nullptr);
     delete[] trtModelStream;
     return;
-}                    
+}     
+
+void serializeOnnx2engine(std::unique_ptr<nvinfer1::ICudaEngine, TRTDestroy> &engine,const string & model_path )
+{
+    // this function have bug and crashed during run ...
+    cout<<"||||||||||||||||||||||||||||||||||||||"<<endl;
+    nvinfer1::IHostMemory* modelStream = engine->serialize();
+    cout<<"||||||||||||||||||||||||||||||||||||||"<<endl;
+    assert(modelStream != nullptr);
+
+    std::ofstream p("head.engine", std::ios::binary);
+    if (!p)
+    {
+        std::cerr << "could not open plan output file" << std::endl;
+        return;
+    }
+    p.write(reinterpret_cast<const char*>(modelStream->data()), modelStream->size());
+    delete modelStream;
+
+    return;
+}
 
 void postprocessResults(float * gpu_output,const nvinfer1::Dims &dims, int batch_size, std::string file_name)
 {
