@@ -1,6 +1,6 @@
 # StmTrt
 
-how to run
+## how to run
 ```
 python create-onnx-models.py
 cd trt
@@ -9,3 +9,8 @@ cd build
 cmake ..
 make 
 ```
+
+## TODO list:
+- [ ] reduce cost of memcpy
+
+- [ ] some cleaning code 

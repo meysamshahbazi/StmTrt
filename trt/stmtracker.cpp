@@ -156,7 +156,6 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
         }
     }
    
-    
     cudaMemcpy(buffers_base_q[0], data, batch_size * 3 * q_size * q_size * sizeof(float), cudaMemcpyHostToDevice);
     // context_base_q->enqueue(batch_size,buffers_base_q.data(),0,nullptr);
     context_base_q->enqueueV2(buffers_base_q.data(),0,nullptr);
@@ -170,7 +169,7 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
     
     int mem_step = score_size*score_size;
     auto start = std::chrono::system_clock::now();
-    // to do change this strange line of code into the zero copy code 
+    // TODO: change this strange line of code into the zero copy code 
     for (int i = 0;i <512;i++)
     {
         for (int j = 0;j <6;j++)
