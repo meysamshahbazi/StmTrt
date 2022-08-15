@@ -4,7 +4,6 @@
 #define batch_size 1
 stmtracker::stmtracker(/* args */)
 {
-    
     // parseOnnxModel(model_path_base_q,engine_base_q,context_base_q);
     const string  engine_path_base_q{"../../backbone_q.engine"};
     parseEngineModel(engine_path_base_q,engine_base_q,context_base_q);
@@ -21,7 +20,6 @@ stmtracker::stmtracker(/* args */)
     buffers_base_m.reserve(engine_base_m->getNbBindings());
     buffers_head.reserve(engine_head->getNbBindings());
 
-    
     cout<<"------------------------------"<<endl;
     for (size_t i = 0; i < engine_base_q->getNbBindings(); ++i)
     {
@@ -69,15 +67,15 @@ stmtracker::stmtracker(/* args */)
             output_dims_head.emplace_back(engine_head->getBindingDimensions(i));
         }
     }
-
+    cout<<"------------------------------"<<endl;
     
     cudaStreamCreate(&stream_m);
     
-    // cudaMallocHost((void **)&data_q, 1 * 3 * q_size * q_size*sizeof(float));
-    // cudaMallocHost((void **)&data_m, 1 * 3 * m_size * m_size*sizeof(float));
-    // cudaMallocHost((void **)&fg_bg_label_map, m_size * m_size*sizeof(float));
+    cudaMallocHost((void **)&data_q, 1 * 3 * q_size * q_size*sizeof(float));
+    cudaMallocHost((void **)&data_m, 1 * 3 * m_size * m_size*sizeof(float));
+    cudaMallocHost((void **)&fg_bg_label_map, m_size * m_size*sizeof(float));
 
-    // cudaHostAlloc((void **)&data_q, 1 * 3 * q_size * q_size*sizeof(float),  cudaHostAllocWriteCombined | cudaHostAllocMapped);
+    // cudaHostAllo c((void **)&data_q, 1 * 3 * q_size * q_size*sizeof(float),  cudaHostAllocWriteCombined | cudaHostAllocMapped);
     // cudaHostAlloc((void **)&data_m, 1 * 3 * m_size * m_size*sizeof(float),  cudaHostAllocWriteCombined | cudaHostAllocMapped);
     // cudaHostAlloc((void **)&fg_bg_label_map, m_size * m_size*sizeof(float), cudaHostAllocWriteCombined | cudaHostAllocMapped);
     
@@ -128,8 +126,6 @@ Rect2f stmtracker::update(Mat im)
     float x1 = new_target_pos.x-new_target_sz.width/2;
     float y1 = new_target_pos.y-new_target_sz.height/2;    
     Rect2f track_rect = Rect2f(x1,y1,new_target_sz.width,new_target_sz.height);
-
-    // cout<<track_rect<<endl;
     
     last_img = im;
 
@@ -150,26 +146,8 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
    
     get_crop_single(im_q,target_pos_prior,target_scale,q_size,avg_chans,im_q_crop,scale_q);
     
-    float data_q[1 * 3 * q_size * q_size];
-    
-    
-
+    // float data_q[1 * 3 * q_size * q_size];
     int data_idx = 0;
-    
-    
-
-    // for (int i = 0; i < im_q_crop.rows; ++i)
-    // {
-    //     cv::Vec3b* pixel = im_q_crop.ptr<cv::Vec3b>(i); // point to first pixel in row
-    //     for (int j = 0; j < im_q_crop.cols; ++j)
-    //     {
-    //         data_q[data_idx] = pixel[j][0];
-    //         data_q[data_idx+m_size * m_size]  = pixel[j][1];
-    //         data_q[data_idx+2*m_size * m_size] = pixel[j][2]; 
-    //         data_idx++;
-    //     }
-    // }
-
     for (int i = 0; i < im_q_crop.rows; ++i)
     {
         uchar* pixel = im_q_crop.ptr<uchar>(i);  // point to first color in row
@@ -182,12 +160,7 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
         }
     }
     
-    
-
     cudaMemcpy(buffers_base_q[0], data_q, batch_size * 3 * q_size * q_size * sizeof(float), cudaMemcpyHostToDevice);
-
-    
-
 
     // context_base_q->enqueue(batch_size,buffers_base_q.data(),0,nullptr);
     context_base_q->enqueueV2(buffers_base_q.data(),0,nullptr);
@@ -195,7 +168,6 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
 
     // now buffers_base_q[1] contains fq
     #define FQ_SIZE 512*25*25
-    // auto start = std::chrono::system_clock::now();
     //-------------------------------------------------------------------------------------------------------------
     // the next two line is very important!! the first line is using memcpy that have cost, but using just pointers can solve our problem 
     // cudaMemcpy(buffers_head[1],buffers_base_q[1],batch_size*FQ_SIZE*sizeof(float),cudaMemcpyDeviceToDevice);
@@ -205,8 +177,8 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
     
     int mem_step = score_size*score_size;
     
-    for (int j = 0;j <6;j++)
-        buffers_head[j] = features[j]; // 0 to 5 belong to fm1-6
+    for (int i = 0;i <6;i++)
+        buffers_head[i] = features[i]; // 0 to 5 belong to fm1-6
     
     context_head->enqueueV2(buffers_head.data(),0,nullptr);
 
@@ -249,7 +221,6 @@ void stmtracker::_postprocess_box(float score_best,vector<float> box_best,float 
     float res_h = target_sz_prior.height*(1-lr)+pred_in_crop[3]*lr;
 
     // do _restrict_box:
-
     res_x = std::max(0.0f,std::min( (float)im_w,res_x));
     res_y = std::max(0.0f,std::min( (float)im_h,res_y));
 
@@ -262,7 +233,6 @@ void stmtracker::_postprocess_box(float score_best,vector<float> box_best,float 
 
 void stmtracker::_postprocess_score(vector<float> score,vector<vector<float>> box_wh,vector<float> &pscore,vector<float> &penalty )
 {
-
     pscore.clear();
     penalty.clear();
 
@@ -286,10 +256,12 @@ void stmtracker::_postprocess_score(vector<float> score,vector<vector<float>> bo
     }
 
 }
+
 float stmtracker::change(float r)
 {
     return std::max(r,1.0f/r);
 }
+
 float stmtracker::sz(float w,float h)
 {
     float pad = (w+h)/2;
@@ -309,8 +281,7 @@ vector<int> stmtracker::select_representatives(int cur_frame_idx)
         for(int i =0;i<num_segments;i++)
             indexes.push_back(i*dur+dur/2+1);
 
-        indexes.push_back(cur_frame_idx-1);
-        
+        indexes.push_back(cur_frame_idx-1); 
     }
     else 
     {
@@ -321,7 +292,6 @@ vector<int> stmtracker::select_representatives(int cur_frame_idx)
         {
             indexes.push_back(cur_frame_idx-1);
         }
-
     }
     
     return indexes; 
@@ -333,21 +303,10 @@ void stmtracker::memorize()
     float scale_m = std::sqrt(target_sz_prior.area()/base_target_sz.area());
     Mat im_m_crop;
     float real_scale;
-    float data_m[1 * 3 * m_size * m_size];
+    // float data_m[1 * 3 * m_size * m_size];
     get_crop_single(last_img,target_pos,scale_m,m_size,avg_chans,im_m_crop,real_scale);
 
     int data_idx = 0;
-    // for (int i = 0; i < im_m_crop.rows; ++i)
-    // {
-    //     cv::Vec3b* pixel = im_m_crop.ptr<cv::Vec3b>(i); // point to first pixel in row
-    //     for (int j = 0; j < im_m_crop.cols; ++j)
-    //     {
-    //         data_m[data_idx] = pixel[j][0];
-    //         data_m[data_idx+m_size * m_size]  = pixel[j][1];
-    //         data_m[data_idx+2*m_size * m_size] = pixel[j][2]; 
-    //         data_idx++;
-    //     }
-    // }
 
     for (int i = 0; i < im_m_crop.rows; ++i)
     {
@@ -366,7 +325,7 @@ void stmtracker::memorize()
     int x2 = (m_size-1)/2 + target_sz_prior.width*real_scale/2;
     int y2 = (m_size-1)/2 + target_sz_prior.height*real_scale/2;
 
-    float fg_bg_label_map[m_size * m_size] ;
+    // float fg_bg_label_map[m_size * m_size] ;
     for (int i = 0; i < m_size; i++)
         for (int j = 0; j < m_size ; j++)
         {
@@ -447,7 +406,7 @@ void stmtracker::get_crop_single(Mat & im,Point2f target_pos_,
     {
         im2 = im;
     }
-    // cout<<"df "<<df<<endl;
+
     float sz = sample_sz/df;
     
     int szl = std::max(static_cast<int>(std::round(sz)) ,2);
@@ -475,7 +434,7 @@ void stmtracker::get_crop_single(Mat & im,Point2f target_pos_,
                     BORDER_CONSTANT,
                     avg_chans
     ); 	
-    
+
     real_scale = static_cast<float>(output_sz)/((br.x-tl.x+1)*df) ;   
 }
 
@@ -495,9 +454,9 @@ stmtracker::~stmtracker()
 
     cudaStreamDestroy(stream_m);
 
-    // cudaFreeHost(data_q);
-    // cudaFreeHost(data_m);
-    // cudaFreeHost(fg_bg_label_map);
+    cudaFreeHost(data_q);
+    cudaFreeHost(data_m);
+    cudaFreeHost(fg_bg_label_map);
     
 }
 

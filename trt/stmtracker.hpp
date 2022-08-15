@@ -29,9 +29,9 @@ using namespace cv;
 class stmtracker
 {
 private:
-    // float *data_q;
-    // float *data_m;
-    // float *fg_bg_label_map;
+    float *data_q;
+    float *data_m;
+    float *fg_bg_label_map;
     cudaStream_t stream_m;
     Logger logger;
     const string  model_path_base_q{"../../backbone_q.onnx"};
