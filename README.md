@@ -15,6 +15,8 @@ make
 
 - [x] some cleaning code 
 
+- [ ] work on `get_crop_single()` finction
+
 - [ ] solve problem of creating engine for head 
 
 - [ ] Subnormal FP16 values detected

@@ -448,13 +448,19 @@ void stmtracker::get_crop_single(Mat & im,Point2f target_pos_,
             // im_cols.push_back(im_rows);
         }
 
+        int reduced_row_sz2 = (nRows-os.x+1)/df;
+        int reduced_col_sz2 = (nCols/3-os.y+1)/df;
+
+
+        cout<<reduced_row_sz <<" "<<reduced_row_sz2<<" "<< reduced_col_sz<<" "<< reduced_col_sz2<<endl;
+
         im2 = cv::Mat(reduced_row_sz, reduced_col_sz, CV_8UC3,pixel_vec.data()).clone();
     }
     else
     {
         im2 = im;
     }
-
+    cout<<"df "<<df<<endl;
     float sz = sample_sz/df;
     
     int szl = std::max(static_cast<int>(std::round(sz)) ,2);
