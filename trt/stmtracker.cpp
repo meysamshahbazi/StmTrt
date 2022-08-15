@@ -160,13 +160,12 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
     // context_base_q->enqueue(batch_size,buffers_base_q.data(),0,nullptr);
     context_base_q->enqueueV2(buffers_base_q.data(),0,nullptr);
     // context_base_q->executeV2(buffers_base_q.data());
-    // for debug
-    // end of debug 
+
     // now buffers_base_q[1] contains fq
     #define FQ_SIZE 512*25*25
     
-    cudaMemcpy(buffers_head[1],buffers_base_q[1],batch_size*FQ_SIZE*sizeof(float),cudaMemcpyDeviceToDevice);
-    
+    // cudaMemcpy(buffers_head[1],buffers_base_q[1],batch_size*FQ_SIZE*sizeof(float),cudaMemcpyDeviceToDevice);
+    buffers_head[1] = buffers_base_q[1];
     int mem_step = score_size*score_size;
     auto start = std::chrono::system_clock::now();
     // TODO: change this strange line of code into the zero copy code 
