@@ -163,11 +163,16 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
 
     // now buffers_base_q[1] contains fq
     #define FQ_SIZE 512*25*25
-    
-    // cudaMemcpy(buffers_head[1],buffers_base_q[1],batch_size*FQ_SIZE*sizeof(float),cudaMemcpyDeviceToDevice);
-    buffers_head[1] = buffers_base_q[1];
-    int mem_step = score_size*score_size;
     auto start = std::chrono::system_clock::now();
+    //-------------------------------------------------------------------------------------------------------------
+    // the next two line is very important!! the first line is using memcpy that have cost, but using just pointers can solve our problem 
+    // cudaMemcpy(buffers_head[1],buffers_base_q[1],batch_size*FQ_SIZE*sizeof(float),cudaMemcpyDeviceToDevice);
+    buffers_head[1] = buffers_base_q[1]; // this is very better than pervius line!!
+    //-------------------------------------------------------------------------------------------------------------
+    auto end = std::chrono::system_clock::now();
+    std::cout <<"memcpy " << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << "us" << std::endl;
+    int mem_step = score_size*score_size;
+    
     // TODO: change this strange line of code into the zero copy code 
     for (int i = 0;i <512;i++)
     {
@@ -182,8 +187,7 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
                         batch_size*mem_step*sizeof(float),cudaMemcpyDeviceToDevice);
         }
     }
-    auto end = std::chrono::system_clock::now();
-    std::cout <<"memcpy " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+    
     
     context_head->enqueueV2(buffers_head.data(),0,nullptr);
 
