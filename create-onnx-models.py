@@ -228,9 +228,9 @@ class Head(nn.Module):
         self.total_stride = 8
         score_offset = (hps["q_size"] - 1.0 - (hps["score_size"] - 1) * hps["total_stride"]) // 2.0
         self.fm_ctr = get_xy_ctr_np(hps["score_size"], score_offset, hps["total_stride"])
-    def forward(self,fm,fq):
-#         q_size = 299
-#         fm = fm.permute(0, 2,1, 3, 4)
+    def forward(self,fm1,fm2,fm3,fm4,fm5,fm6,fq):
+
+        fm = torch.cat([fm1,fm2,fm3,fm4,fm5,fm6],dim = 2)
         y = self.head.memory_read(fm, fq)
         cls_score, ctr_score, offsets = self.head.solve(y)
         
@@ -256,6 +256,7 @@ class Head(nn.Module):
         fcos_score_final = fcos_cls_prob_final * fcos_ctr_prob_final
         return fcos_score_final, fcos_bbox_final
 
+
 # In[139]:
 
 
@@ -263,16 +264,28 @@ net = Head(model.head)
 net.eval()
 net.cuda()
 ONNX_FILE_PATH = "head.onnx"
-fm = torch.randn(1, 512, 6, 25, 25).cuda()
+# fm = torch.randn(1, 512, 6, 25, 25).cuda()
+fm1 = torch.randn(1, 512, 1, 25, 25).cuda()
+fm2 = torch.randn(1, 512, 1, 25, 25).cuda()
+fm3 = torch.randn(1, 512, 1, 25, 25).cuda()
+fm4 = torch.randn(1, 512, 1, 25, 25).cuda()
+fm5 = torch.randn(1, 512, 1, 25, 25).cuda()
+fm6 = torch.randn(1, 512, 1, 25, 25).cuda()
+
 fq = torch.randn(1, 512, 25, 25).cuda()
 
 
 # In[140]:
 
-torch.onnx.export(net, (fm,fq), 
-                  ONNX_FILE_PATH, input_names=["fm","fq"], 
+# torch.onnx.export(net, (fm,fq), 
+#                   ONNX_FILE_PATH, input_names=["fm","fq"], 
+#                   output_names=["score", "bbox"]
+#                   , export_params=True
+
+torch.onnx.export(net, (fm1,fm2,fm3,fm4,fm5,fm6,fq), 
+                  ONNX_FILE_PATH, input_names=["fm1","fm2","fm3","fm4","fm5","fm6","fq"], 
                   output_names=["score", "bbox"]
-                  , export_params=True
+                  , export_params=True)
 
 # torch.onnx.export(net, (fm,fq), 
 #                   ONNX_FILE_PATH, input_names=["fm","fq"], 

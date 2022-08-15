@@ -167,33 +167,37 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
     //-------------------------------------------------------------------------------------------------------------
     // the next two line is very important!! the first line is using memcpy that have cost, but using just pointers can solve our problem 
     // cudaMemcpy(buffers_head[1],buffers_base_q[1],batch_size*FQ_SIZE*sizeof(float),cudaMemcpyDeviceToDevice);
-    buffers_head[1] = buffers_base_q[1]; // this is very better than pervius line!!
+    buffers_head[6] = buffers_base_q[1]; // this is very better than pervius line!!
     //-------------------------------------------------------------------------------------------------------------
     auto end = std::chrono::system_clock::now();
-    std::cout <<"memcpy " << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << "us" << std::endl;
+    
     int mem_step = score_size*score_size;
     
     // TODO: change this strange line of code into the zero copy code 
-    for (int i = 0;i <512;i++)
-    {
-        for (int j = 0;j <6;j++)
-        {
-            float *dst = static_cast<float *>(buffers_head[0]);
-            dst += (6*i+j)*mem_step;
-            float *src = static_cast<float *>(features[j]);
-            src += i*mem_step;
-            cudaMemcpy( (void *) dst,
-                        (void *) src,
-                        batch_size*mem_step*sizeof(float),cudaMemcpyDeviceToDevice);
-        }
-    }
+
+    // for (int i = 0;i <512;i++)
+    // {
+    //     for (int j = 0;j <6;j++)
+    //     {
+    //         float *dst = static_cast<float *>(buffers_head[0]);
+    //         dst += (6*i+j)*mem_step;
+    //         float *src = static_cast<float *>(features[j]);
+    //         src += i*mem_step;
+    //         cudaMemcpy( (void *) dst,
+    //                     (void *) src,
+    //                     batch_size*mem_step*sizeof(float),cudaMemcpyDeviceToDevice);
+    //     }
+    // }
+
+    for (int j = 0;j <6;j++)
+        buffers_head[j] = features[j]; // 0 to 5 belong to fm1-6
     
-    
+    std::cout <<"memcpy " << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << "us" << std::endl;
     context_head->enqueueV2(buffers_head.data(),0,nullptr);
 
 
     vector<float> box(getSizeByDim(output_dims_head[0])*batch_size);
-    cudaMemcpy(box.data(), buffers_head[2],box.size()*sizeof(float),cudaMemcpyDeviceToHost);
+    cudaMemcpy(box.data(), buffers_head[7],box.size()*sizeof(float),cudaMemcpyDeviceToHost);
 
     // vector<float> cls(getSizeByDim(output_dims_head[1])*batch_size);
     // cudaMemcpy(cls.data(), buffers_head[3],cls.size()*sizeof(float),cudaMemcpyDeviceToHost);
@@ -202,7 +206,7 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
     // cudaMemcpy(ctr.data(), buffers_head[4],ctr.size()*sizeof(float),cudaMemcpyDeviceToHost);
 
     vector<float> score(getSizeByDim(output_dims_head[1])*batch_size);
-    cudaMemcpy(score.data(), buffers_head[3],score.size()*sizeof(float),cudaMemcpyDeviceToHost);
+    cudaMemcpy(score.data(), buffers_head[8],score.size()*sizeof(float),cudaMemcpyDeviceToHost);
 
 
     // vector<float> tempp(getSizeByDim(output_dims_head[2])*batch_size);
@@ -373,7 +377,6 @@ void stmtracker::memorize()
     // cudaMemcpyAsync(temp_ptr,(float *) buffers_base_m[2],getSizeByDim(output_dims_base_m[0])*sizeof(float),cudaMemcpyDeviceToDevice);
 
     all_memory_frame_feats.push_back(temp_ptr);
-
     return;
 }
 
