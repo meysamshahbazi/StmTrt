@@ -21,7 +21,7 @@ make
 
 - [ ] Subnormal FP16 values detected
 
-- [ ] use pin memory for image [check this](https://docs.nvidia.com/deeplearning/tensorrt/developer-guide/index.html#h2d-d2h-data-trans-pci-band)
+- [x] use pin memory for image [check this](https://docs.nvidia.com/deeplearning/tensorrt/developer-guide/index.html#h2d-d2h-data-trans-pci-band)
 
 - [ ] use DEFINE for index of buffers in code 
 
