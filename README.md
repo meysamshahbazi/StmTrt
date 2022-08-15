@@ -13,4 +13,4 @@ make
 ## TODO list:
 - [ ] reduce cost of memcpy
 
-- [ ] some cleaning code 
+- [x] some cleaning code 
