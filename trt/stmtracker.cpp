@@ -95,7 +95,6 @@ void stmtracker::init(Mat im, Rect2f state)
 
 Rect2f stmtracker::update(Mat im)
 {
-    //  
     auto start = std::chrono::system_clock::now();
     target_pos_prior = target_pos;
     target_sz_prior = target_sz;
@@ -173,44 +172,17 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
     
     int mem_step = score_size*score_size;
     
-    // TODO: change this strange line of code into the zero copy code 
-
-    // for (int i = 0;i <512;i++)
-    // {
-    //     for (int j = 0;j <6;j++)
-    //     {
-    //         float *dst = static_cast<float *>(buffers_head[0]);
-    //         dst += (6*i+j)*mem_step;
-    //         float *src = static_cast<float *>(features[j]);
-    //         src += i*mem_step;
-    //         cudaMemcpy( (void *) dst,
-    //                     (void *) src,
-    //                     batch_size*mem_step*sizeof(float),cudaMemcpyDeviceToDevice);
-    //     }
-    // }
-
     for (int j = 0;j <6;j++)
         buffers_head[j] = features[j]; // 0 to 5 belong to fm1-6
     
-    std::cout <<"memcpy " << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << "us" << std::endl;
     context_head->enqueueV2(buffers_head.data(),0,nullptr);
-
 
     vector<float> box(getSizeByDim(output_dims_head[0])*batch_size);
     cudaMemcpy(box.data(), buffers_head[7],box.size()*sizeof(float),cudaMemcpyDeviceToHost);
 
-    // vector<float> cls(getSizeByDim(output_dims_head[1])*batch_size);
-    // cudaMemcpy(cls.data(), buffers_head[3],cls.size()*sizeof(float),cudaMemcpyDeviceToHost);
-
-    // vector<float> ctr(getSizeByDim(output_dims_head[2])*batch_size);
-    // cudaMemcpy(ctr.data(), buffers_head[4],ctr.size()*sizeof(float),cudaMemcpyDeviceToHost);
-
     vector<float> score(getSizeByDim(output_dims_head[1])*batch_size);
     cudaMemcpy(score.data(), buffers_head[8],score.size()*sizeof(float),cudaMemcpyDeviceToHost);
 
-
-    // vector<float> tempp(getSizeByDim(output_dims_head[2])*batch_size);
-    // cudaMemcpy(tempp.data(), buffers_head[3],tempp.size()*sizeof(float),cudaMemcpyDeviceToHost);
 
     vector<vector<float>> box_wh = xyxy2cxywh(box);
 
@@ -236,14 +208,13 @@ void stmtracker::_postprocess_box(float score_best,vector<float> box_best,float 
                                     };
 
     float lr = penalty_best*score_best*test_lr;
-    // cout<<lr<<endl;
+
     float res_x = pred_in_crop[0] + target_pos_prior.x - (q_size/2)/scale_q;
     float res_y = pred_in_crop[1] + target_pos_prior.y - (q_size/2)/scale_q;
 
     float res_w = target_sz_prior.width*(1-lr)+pred_in_crop[2]*lr;
     float res_h = target_sz_prior.height*(1-lr)+pred_in_crop[3]*lr;
 
-    // std::cout<<"res_x: "<<res_x<<" res_y "<<res_y<<" res_w "<<res_w<<" res_h "<<res_h<<endl;
     // do _restrict_box:
 
     res_x = std::max(0.0f,std::min( (float)im_w,res_x));
