@@ -72,6 +72,15 @@ stmtracker::stmtracker(/* args */)
 
     
     cudaStreamCreate(&stream_m);
+    
+    // cudaMallocHost((void **)&data_q, 1 * 3 * q_size * q_size*sizeof(float));
+    // cudaMallocHost((void **)&data_m, 1 * 3 * m_size * m_size*sizeof(float));
+    // cudaMallocHost((void **)&fg_bg_label_map, m_size * m_size*sizeof(float));
+
+    // cudaHostAlloc((void **)&data_q, 1 * 3 * q_size * q_size*sizeof(float),  cudaHostAllocWriteCombined | cudaHostAllocMapped);
+    // cudaHostAlloc((void **)&data_m, 1 * 3 * m_size * m_size*sizeof(float),  cudaHostAllocWriteCombined | cudaHostAllocMapped);
+    // cudaHostAlloc((void **)&fg_bg_label_map, m_size * m_size*sizeof(float), cudaHostAllocWriteCombined | cudaHostAllocMapped);
+    
 }
 
 void stmtracker::init(Mat im, Rect2f state)
@@ -90,6 +99,7 @@ void stmtracker::init(Mat im, Rect2f state)
     float search_area = search_area_factor*search_area_factor*target_sz.area();
     target_scale = std::sqrt(search_area)/q_size;
     base_target_sz = target_sz/target_scale;
+
     return;
 }
 
@@ -140,35 +150,58 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
    
     get_crop_single(im_q,target_pos_prior,target_scale,q_size,avg_chans,im_q_crop,scale_q);
     
-    float data[1 * 3 * q_size * q_size];
+    float data_q[1 * 3 * q_size * q_size];
+    
+    
+
     int data_idx = 0;
     
+    
+
+    // for (int i = 0; i < im_q_crop.rows; ++i)
+    // {
+    //     cv::Vec3b* pixel = im_q_crop.ptr<cv::Vec3b>(i); // point to first pixel in row
+    //     for (int j = 0; j < im_q_crop.cols; ++j)
+    //     {
+    //         data_q[data_idx] = pixel[j][0];
+    //         data_q[data_idx+m_size * m_size]  = pixel[j][1];
+    //         data_q[data_idx+2*m_size * m_size] = pixel[j][2]; 
+    //         data_idx++;
+    //     }
+    // }
+
     for (int i = 0; i < im_q_crop.rows; ++i)
     {
-        cv::Vec3b* pixel = im_q_crop.ptr<cv::Vec3b>(i); // point to first pixel in row
+        uchar* pixel = im_q_crop.ptr<uchar>(i);  // point to first color in row
         for (int j = 0; j < im_q_crop.cols; ++j)
         {
-            data[data_idx] = pixel[j][0];
-            data[data_idx+m_size * m_size]  = pixel[j][1];
-            data[data_idx+2*m_size * m_size] = pixel[j][2]; 
+            data_q[data_idx] = *pixel++;
+            data_q[data_idx+q_size*q_size] = *pixel++;
+            data_q[data_idx+2*q_size*q_size] = *pixel++;
             data_idx++;
         }
     }
-   
-    cudaMemcpy(buffers_base_q[0], data, batch_size * 3 * q_size * q_size * sizeof(float), cudaMemcpyHostToDevice);
+    
+    
+
+    cudaMemcpy(buffers_base_q[0], data_q, batch_size * 3 * q_size * q_size * sizeof(float), cudaMemcpyHostToDevice);
+
+    
+
+
     // context_base_q->enqueue(batch_size,buffers_base_q.data(),0,nullptr);
     context_base_q->enqueueV2(buffers_base_q.data(),0,nullptr);
     // context_base_q->executeV2(buffers_base_q.data());
 
     // now buffers_base_q[1] contains fq
     #define FQ_SIZE 512*25*25
-    auto start = std::chrono::system_clock::now();
+    // auto start = std::chrono::system_clock::now();
     //-------------------------------------------------------------------------------------------------------------
     // the next two line is very important!! the first line is using memcpy that have cost, but using just pointers can solve our problem 
     // cudaMemcpy(buffers_head[1],buffers_base_q[1],batch_size*FQ_SIZE*sizeof(float),cudaMemcpyDeviceToDevice);
     buffers_head[6] = buffers_base_q[1]; // this is very better than pervius line!!
     //-------------------------------------------------------------------------------------------------------------
-    auto end = std::chrono::system_clock::now();
+    // auto end = std::chrono::system_clock::now();
     
     int mem_step = score_size*score_size;
     
@@ -300,18 +333,30 @@ void stmtracker::memorize()
     float scale_m = std::sqrt(target_sz_prior.area()/base_target_sz.area());
     Mat im_m_crop;
     float real_scale;
-    float data[1 * 3 * m_size * m_size];
+    float data_m[1 * 3 * m_size * m_size];
     get_crop_single(last_img,target_pos,scale_m,m_size,avg_chans,im_m_crop,real_scale);
 
     int data_idx = 0;
+    // for (int i = 0; i < im_m_crop.rows; ++i)
+    // {
+    //     cv::Vec3b* pixel = im_m_crop.ptr<cv::Vec3b>(i); // point to first pixel in row
+    //     for (int j = 0; j < im_m_crop.cols; ++j)
+    //     {
+    //         data_m[data_idx] = pixel[j][0];
+    //         data_m[data_idx+m_size * m_size]  = pixel[j][1];
+    //         data_m[data_idx+2*m_size * m_size] = pixel[j][2]; 
+    //         data_idx++;
+    //     }
+    // }
+
     for (int i = 0; i < im_m_crop.rows; ++i)
     {
-        cv::Vec3b* pixel = im_m_crop.ptr<cv::Vec3b>(i); // point to first pixel in row
+        uchar* pixel = im_m_crop.ptr<uchar>(i);  // point to first color in row
         for (int j = 0; j < im_m_crop.cols; ++j)
         {
-            data[data_idx] = pixel[j][0];
-            data[data_idx+m_size * m_size]  = pixel[j][1];
-            data[data_idx+2*m_size * m_size] = pixel[j][2]; 
+            data_m[data_idx] = *pixel++;
+            data_m[data_idx+q_size*q_size] = *pixel++;
+            data_m[data_idx+2*q_size*q_size] = *pixel++;
             data_idx++;
         }
     }
@@ -334,7 +379,7 @@ void stmtracker::memorize()
     // cudaMemcpy(buffers_base_m[0], data, batch_size * 3 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice);
     // cudaStream_t stream_m;
     // cudaStreamCreate(&stream_m);
-    cudaMemcpyAsync(buffers_base_m[0], data, batch_size * 3 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice,stream_m);
+    cudaMemcpyAsync(buffers_base_m[0], data_m, batch_size * 3 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice,stream_m);
     // cudaMemcpy(buffers_base_m[1], fg_bg_label_map, batch_size * 1 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpyAsync(buffers_base_m[1], fg_bg_label_map, batch_size * 1 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice,stream_m);
     // context_base_m->enqueue(batch_size,buffers_base_m.data(),0,nullptr);
@@ -357,7 +402,7 @@ void stmtracker::get_crop_single(Mat & im,Point2f target_pos_,
 {
     // reversed pos!! 
     // pos is target_pos
-
+    auto start = std::chrono::system_clock::now();
     Point2i posl = Point2i(target_pos_);
     float sample_sz = target_scale*output_sz;    
     // resize_factor = np.min(sample_sz.astype(np.float) / output_sz.astype(np.float)).item()
@@ -438,6 +483,8 @@ void stmtracker::get_crop_single(Mat & im,Point2f target_pos_,
                     avg_chans
     ); 	
     real_scale = static_cast<float>(output_sz)/((br.x-tl.x+1)*df) ;   
+    auto end = std::chrono::system_clock::now();
+    std::cout <<"get_crop_single " << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " us" << std::endl;
 }
 
 stmtracker::~stmtracker()
@@ -455,6 +502,10 @@ stmtracker::~stmtracker()
         cudaFree(buf);
 
     cudaStreamDestroy(stream_m);
+
+    // cudaFreeHost(data_q);
+    // cudaFreeHost(data_m);
+    // cudaFreeHost(fg_bg_label_map);
     
 }
 
