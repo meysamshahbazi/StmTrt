@@ -43,7 +43,7 @@ int main(int argc, const char ** argv)
         tick_counter += t2 - t1;
         // std::cout<<roi.x<<" "<<roi.y<<" "<<roi.width<<" "<<roi.height<<endl;
         // Rect roi_int = 
-        // cout << "FPS: " << ((double)(frame_idx)) / (static_cast<double>(tick_counter) / cv::getTickFrequency()) << endl;
+        cout << "FPS: " << ((double)(frame_idx)) / (static_cast<double>(tick_counter) / cv::getTickFrequency()) << endl;
         rectangle( frame, roi, Scalar( 255, 0, 0 ), 2, 1 );
         
         imshow("tracker",frame);

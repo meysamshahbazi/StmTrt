@@ -15,7 +15,7 @@ make
 
 - [x] some cleaning code 
 
-- [ ] work on `get_crop_single()` finction
+- [x] work on `get_crop_single()` finction
 
 - [ ] solve problem of creating engine for head 
 

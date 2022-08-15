@@ -402,19 +402,13 @@ void stmtracker::get_crop_single(Mat & im,Point2f target_pos_,
 {
     // reversed pos!! 
     // pos is target_pos
-    auto start = std::chrono::system_clock::now();
     Point2i posl = Point2i(target_pos_);
     float sample_sz = target_scale*output_sz;    
-    // resize_factor = np.min(sample_sz.astype(np.float) / output_sz.astype(np.float)).item()
-    // float resize_factor = std::min(sample_sz,static_cast<float>(output_sz));
     float resize_factor = sample_sz/output_sz;
     
     int df = std::max(static_cast<int>(resize_factor-0.1),1);
     Mat im2;
 
-    // auto start = std::chrono::system_clock::now();
-
-    
     if (df > 1)
     {
         // Point2i os = Point2i(static_cast<int>(target_pos_.x) % df,static_cast<int>(target_pos_.y) % df);
@@ -422,7 +416,6 @@ void stmtracker::get_crop_single(Mat & im,Point2f target_pos_,
         std::vector<uchar> im_rows;
         std::vector< std::vector<uchar> > im_cols;
         posl = Point2i((posl.x-os.x)/df , (posl.y-os.y)/df);
-
         int channels = im.channels();
 
         int nRows = im.rows;
@@ -430,37 +423,31 @@ void stmtracker::get_crop_single(Mat & im,Point2f target_pos_,
         int i,j;
         uchar* p;
         std::vector<uchar> pixel_vec;
-        int reduced_col_sz = 0;
-        int reduced_row_sz = 0;
+        
+        int reduced_row_sz = (im.rows - os.x+df-1)/df;
+        int reduced_col_sz = (im.cols - os.y+df-1)/df;
+
+        uchar img_data[reduced_row_sz*reduced_col_sz*3];
+        int data_idx = 0;
         for( i = os.x; i < nRows; i+=df)
         {
-            p = im.ptr<uchar>(i);
-            // im_cols.clear(); 
-            reduced_col_sz = 0;
+            uchar* pixel = im.ptr<uchar>(i);  // point to first color in row
             for ( j = os.y*3; j < nCols;j+=3*df)
             {
-                pixel_vec.push_back(p[j]);
-                pixel_vec.push_back(p[j+1]);
-                pixel_vec.push_back(p[j+2]);
-                reduced_col_sz ++;
+                img_data[data_idx] = *pixel++;
+                img_data[data_idx+1] = *pixel++;
+                img_data[data_idx+2] = *pixel++;
+                data_idx+=3;
+                pixel += 3*df-3;
             }
-            reduced_row_sz++;
-            // im_cols.push_back(im_rows);
         }
-
-        int reduced_row_sz2 = (nRows-os.x+1)/df;
-        int reduced_col_sz2 = (nCols/3-os.y+1)/df;
-
-
-        cout<<reduced_row_sz <<" "<<reduced_row_sz2<<" "<< reduced_col_sz<<" "<< reduced_col_sz2<<endl;
-
-        im2 = cv::Mat(reduced_row_sz, reduced_col_sz, CV_8UC3,pixel_vec.data()).clone();
+        im2 = cv::Mat(reduced_row_sz, reduced_col_sz, CV_8UC3,img_data);
     }
     else
     {
         im2 = im;
     }
-    cout<<"df "<<df<<endl;
+    // cout<<"df "<<df<<endl;
     float sz = sample_sz/df;
     
     int szl = std::max(static_cast<int>(std::round(sz)) ,2);
@@ -488,9 +475,8 @@ void stmtracker::get_crop_single(Mat & im,Point2f target_pos_,
                     BORDER_CONSTANT,
                     avg_chans
     ); 	
+    
     real_scale = static_cast<float>(output_sz)/((br.x-tl.x+1)*df) ;   
-    auto end = std::chrono::system_clock::now();
-    std::cout <<"get_crop_single " << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " us" << std::endl;
 }
 
 stmtracker::~stmtracker()
