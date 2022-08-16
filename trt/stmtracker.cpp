@@ -75,6 +75,15 @@ stmtracker::stmtracker(/* args */)
     cudaMallocHost((void **)&data_m, 1 * 3 * m_size * m_size*sizeof(float));
     cudaMallocHost((void **)&fg_bg_label_map, m_size * m_size*sizeof(float));
 
+    cudaMallocHost((void **)&box, score_size*score_size*4*batch_size*sizeof(float));
+
+    cudaMallocHost((void **)&score, score_size*score_size*batch_size*sizeof(float));
+
+        // float box[score_size*score_size*4*batch_size];
+    // float score[score_size*score_size*batch_size];
+
+
+
     // cudaHostAllo c((void **)&data_q, 1 * 3 * q_size * q_size*sizeof(float),  cudaHostAllocWriteCombined | cudaHostAllocMapped);
     // cudaHostAlloc((void **)&data_m, 1 * 3 * m_size * m_size*sizeof(float),  cudaHostAllocWriteCombined | cudaHostAllocMapped);
     // cudaHostAlloc((void **)&fg_bg_label_map, m_size * m_size*sizeof(float), cudaHostAllocWriteCombined | cudaHostAllocMapped);
@@ -183,13 +192,15 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
     context_head->enqueueV2(buffers_head.data(),0,nullptr);
 
     // vector<float> box(getSizeByDim(output_dims_head[0])*batch_size);
-    float box[getSizeByDim(output_dims_head[0])*batch_size];
+    // float box[score_size*score_size*4*batch_size];
+    // float score[score_size*score_size*batch_size];
     // cudaMemcpy(box.data(), buffers_head[7],box.size()*sizeof(float),cudaMemcpyDeviceToHost);
     cudaMemcpy(box, buffers_head[7],getSizeByDim(output_dims_head[0])*batch_size*sizeof(float),cudaMemcpyDeviceToHost);
 
     // vector<float> score(getSizeByDim(output_dims_head[1])*batch_size);
-    float score[getSizeByDim(output_dims_head[1])*batch_size];
-
+    
+    // std::cout<<"getSizeByDim(output_dims_head[1] "<<getSizeByDim(output_dims_head[1])<<endl;
+    // std::cout<<"getSizeByDim(output_dims_head[0] "<<getSizeByDim(output_dims_head[0])<<endl;
     cudaMemcpy(score, buffers_head[8],getSizeByDim(output_dims_head[1])*batch_size*sizeof(float),cudaMemcpyDeviceToHost);
 
 
@@ -461,7 +472,9 @@ stmtracker::~stmtracker()
     cudaFreeHost(data_q);
     cudaFreeHost(data_m);
     cudaFreeHost(fg_bg_label_map);
-    
+    cudaFreeHost(box);
+    cudaFreeHost(score);
+
 }
 
 
