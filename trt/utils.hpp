@@ -65,6 +65,6 @@ Mat get_hann_win(Size sz);
 
 void postprocessResults(float * gpu_output,const nvinfer1::Dims &dims, int batch_size, std::string file_name);
 
-std::vector<vector<float>> xyxy2cxywh(const std::vector<float> & box);
+std::vector<vector<float>> xyxy2cxywh(float *box);
 
 #endif

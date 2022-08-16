@@ -88,7 +88,7 @@ private:
     float test_lr{0.95};
 
     vector<int> select_representatives(int cur_frame_idx);
-    void _postprocess_score(vector<float> score,vector<vector<float>> box_wh,vector<float> &pscore,vector<float> &penalty);
+    void _postprocess_score(float * score,const vector<vector<float>> &box_wh,vector<float> &pscore,vector<float> &penalty);
     float change(float r);
     float sz(float w,float h);
     void _postprocess_box(float score_best,vector<float> box_best,float penalty_best,Point2f &new_target_pos,Size2f &new_target_sz);

@@ -151,7 +151,8 @@ void postprocessResults(float * gpu_output,const nvinfer1::Dims &dims, int batch
 
 }
 
-std::vector<vector<float>> xyxy2cxywh(const std::vector<float> & box)
+// std::vector<vector<float>> xyxy2cxywh(const std::vector<float> & box)
+std::vector<vector<float>> xyxy2cxywh(float * box)
 {
     std::vector<vector<float>> box_wh;
     for(int i = 0;i < 625; i++)

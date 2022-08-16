@@ -182,11 +182,15 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
     
     context_head->enqueueV2(buffers_head.data(),0,nullptr);
 
-    vector<float> box(getSizeByDim(output_dims_head[0])*batch_size);
-    cudaMemcpy(box.data(), buffers_head[7],box.size()*sizeof(float),cudaMemcpyDeviceToHost);
+    // vector<float> box(getSizeByDim(output_dims_head[0])*batch_size);
+    float box[getSizeByDim(output_dims_head[0])*batch_size];
+    // cudaMemcpy(box.data(), buffers_head[7],box.size()*sizeof(float),cudaMemcpyDeviceToHost);
+    cudaMemcpy(box, buffers_head[7],getSizeByDim(output_dims_head[0])*batch_size*sizeof(float),cudaMemcpyDeviceToHost);
 
-    vector<float> score(getSizeByDim(output_dims_head[1])*batch_size);
-    cudaMemcpy(score.data(), buffers_head[8],score.size()*sizeof(float),cudaMemcpyDeviceToHost);
+    // vector<float> score(getSizeByDim(output_dims_head[1])*batch_size);
+    float score[getSizeByDim(output_dims_head[1])*batch_size];
+
+    cudaMemcpy(score, buffers_head[8],getSizeByDim(output_dims_head[1])*batch_size*sizeof(float),cudaMemcpyDeviceToHost);
 
 
     vector<vector<float>> box_wh = xyxy2cxywh(box);
@@ -231,7 +235,7 @@ void stmtracker::_postprocess_box(float score_best,vector<float> box_best,float 
     new_target_sz = Size2f(res_w,res_h);
 }
 
-void stmtracker::_postprocess_score(vector<float> score,vector<vector<float>> box_wh,vector<float> &pscore,vector<float> &penalty )
+void stmtracker::_postprocess_score(float * score,const vector<vector<float>> &box_wh,vector<float> &pscore,vector<float> &penalty )
 {
     pscore.clear();
     penalty.clear();
