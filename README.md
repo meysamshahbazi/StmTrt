@@ -15,7 +15,9 @@ make
 
 - [x] some cleaning code 
 
-- [x] work on `get_crop_single()` finction
+- [x] work on `get_crop_single()` function
+
+- [ ] use fp16 `__half' for data
 
 - [ ] solve problem of creating engine for head 
 
