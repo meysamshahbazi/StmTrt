@@ -97,10 +97,10 @@ private:
 public:
     stmtracker(/* args */);
     ~stmtracker();
-    void init(Mat &im, Rect2f state);
-    Rect2f update(Mat &im);
+    void init(Mat im, Rect2f state);
+    Rect2f update(Mat im);
     void memorize();
-    void track(Mat &im,vector<void *> &features,Point2f &new_target_pos, Size2f &new_target_sz);
+    void track(Mat im,vector<void *> &features,Point2f &new_target_pos, Size2f &new_target_sz);
     void get_crop_single(Mat &im,Point2f target_pos,float target_scale, // all input 
                         int output_sz, Scalar avg_chans, // all input 
                         Mat &im_patch, float &real_scale); // these are output 

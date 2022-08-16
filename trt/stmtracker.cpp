@@ -28,6 +28,7 @@ stmtracker::stmtracker(/* args */)
         std::cout<<engine_base_q->getBindingName(i)<<std::endl;
         if (engine_base_q->bindingIsInput(i))
         {
+            
             input_dims_base_q.emplace_back(engine_base_q->getBindingDimensions(i));
         }
         else
@@ -43,6 +44,7 @@ stmtracker::stmtracker(/* args */)
         std::cout<<engine_base_m->getBindingName(i)<<std::endl;
         if (engine_base_m->bindingIsInput(i))
         {
+            
             input_dims_base_m.emplace_back(engine_base_m->getBindingDimensions(i));
         }
         else
@@ -79,7 +81,7 @@ stmtracker::stmtracker(/* args */)
     
 }
 
-void stmtracker::init(Mat &im, Rect2f state)
+void stmtracker::init(Mat im, Rect2f state)
 {
     // im: first frame for tracke
     // state: cv::Rect format constructed with xywh foramt 
@@ -99,7 +101,7 @@ void stmtracker::init(Mat &im, Rect2f state)
     return;
 }
 
-Rect2f stmtracker::update(Mat &im)
+Rect2f stmtracker::update(Mat im)
 {
     auto start = std::chrono::system_clock::now();
     target_pos_prior = target_pos;
@@ -138,7 +140,7 @@ Rect2f stmtracker::update(Mat &im)
     return track_rect;
     
 }
-void stmtracker::track(Mat &im_q,vector<void *> &features,Point2f &new_target_pos, Size2f &new_target_sz)
+void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos, Size2f &new_target_sz)
 {
     Mat im_q_crop;
    
