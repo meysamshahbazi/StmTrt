@@ -4,14 +4,22 @@
 #define batch_size 1
 stmtracker::stmtracker(/* args */)
 {
-    // parseOnnxModel(model_path_base_q,engine_base_q,context_base_q);
+
+    saveEngineFile("../../backbone_q.onnx","../../backbone_q.engine");
+    saveEngineFile("../../memorize.onnx","../../memorize.engine");
+    // saveEngineFile("../../head.onnx","../../head.engine");
+
+    // parseOnnxModel(model_path_base_q,1U<<24,engine_base_q,context_base_q);
     const string  engine_path_base_q{"../../backbone_q.engine"};
     parseEngineModel(engine_path_base_q,engine_base_q,context_base_q);
-    // parseOnnxModel(model_path_base_m,engine_base_m,context_base_m);
+    // parseOnnxModel(model_path_base_m,1U<<24,engine_base_m,context_base_m);
     const string  engine_path_base_m{"../../memorize.engine"};
     parseEngineModel(engine_path_base_m,engine_base_m,context_base_m);
+
+    // const string  engine_path_head{"../../head.engine"};
+    // parseEngineModel(engine_path_head,engine_base_m,context_base_m);
     
-    parseOnnxModel(model_path_head,engine_head,context_head);
+    parseOnnxModel(model_path_head,1U<<24,engine_head,context_head);
     
     // const string  head_path{"../../head.engine"};
     // serializeOnnx2engine(engine_head,head_path);
@@ -84,7 +92,7 @@ stmtracker::stmtracker(/* args */)
 
 
 
-    // cudaHostAllo c((void **)&data_q, 1 * 3 * q_size * q_size*sizeof(float),  cudaHostAllocWriteCombined | cudaHostAllocMapped);
+    // cudaHostAlloc((void **)&data_q, 1 * 3 * q_size * q_size*sizeof(float),  cudaHostAllocWriteCombined | cudaHostAllocMapped);
     // cudaHostAlloc((void **)&data_m, 1 * 3 * m_size * m_size*sizeof(float),  cudaHostAllocWriteCombined | cudaHostAllocMapped);
     // cudaHostAlloc((void **)&fg_bg_label_map, m_size * m_size*sizeof(float), cudaHostAllocWriteCombined | cudaHostAllocMapped);
     

@@ -19,6 +19,8 @@ make
 
 - [ ] use fp16 `__half` for data
 
+- [x] add code for saving engine and loading from engine file 
+
 - [ ] solve problem of creating engine for head 
 
 - [ ] Subnormal FP16 values detected
