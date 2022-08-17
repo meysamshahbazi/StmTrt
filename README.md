@@ -19,6 +19,8 @@ make
 
 - [ ] use fp16 `__half` for data
 
+- [ ] process box and score in cuda cores 
+
 - [x] add code for saving engine and loading from engine file 
 
 - [ ] solve problem of creating engine for head 

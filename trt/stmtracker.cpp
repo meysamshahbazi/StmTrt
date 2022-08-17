@@ -5,8 +5,8 @@
 stmtracker::stmtracker(/* args */)
 {
 
-    saveEngineFile("../../backbone_q.onnx","../../backbone_q.engine");
-    saveEngineFile("../../memorize.onnx","../../memorize.engine");
+    // saveEngineFile("../../backbone_q.onnx","../../backbone_q.engine");
+    // saveEngineFile("../../memorize.onnx","../../memorize.engine");
     // saveEngineFile("../../head.onnx","../../head.engine");
 
     // parseOnnxModel(model_path_base_q,1U<<24,engine_base_q,context_base_q);
@@ -120,7 +120,7 @@ void stmtracker::init(Mat im, Rect2f state)
 
 Rect2f stmtracker::update(Mat im)
 {
-    auto start = std::chrono::system_clock::now();
+    
     target_pos_prior = target_pos;
     target_sz_prior = target_sz;
     
@@ -151,8 +151,7 @@ Rect2f stmtracker::update(Mat im)
     target_scale = std::sqrt( target_sz.area()/base_target_sz.area() ); 
     cur_frame_idx ++;
 
-    auto end = std::chrono::system_clock::now();
-    std::cout <<"update " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+    
     
     return track_rect;
     
@@ -177,7 +176,7 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
         }
     }
     
-    cudaMemcpy(buffers_base_q[0], data_q, batch_size * 3 * q_size * q_size * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpyAsync(buffers_base_q[0], data_q, batch_size * 3 * q_size * q_size * sizeof(float), cudaMemcpyHostToDevice);
 
     // context_base_q->enqueue(batch_size,buffers_base_q.data(),0,nullptr);
     context_base_q->enqueueV2(buffers_base_q.data(),0,nullptr);
@@ -203,6 +202,10 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
     // float box[score_size*score_size*4*batch_size];
     // float score[score_size*score_size*batch_size];
     // cudaMemcpy(box.data(), buffers_head[7],box.size()*sizeof(float),cudaMemcpyDeviceToHost);
+
+    auto start = std::chrono::system_clock::now();
+
+
     cudaMemcpy(box, buffers_head[7],getSizeByDim(output_dims_head[0])*batch_size*sizeof(float),cudaMemcpyDeviceToHost);
 
     // vector<float> score(getSizeByDim(output_dims_head[1])*batch_size);
@@ -210,7 +213,8 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
     // std::cout<<"getSizeByDim(output_dims_head[1] "<<getSizeByDim(output_dims_head[1])<<endl;
     // std::cout<<"getSizeByDim(output_dims_head[0] "<<getSizeByDim(output_dims_head[0])<<endl;
     cudaMemcpy(score, buffers_head[8],getSizeByDim(output_dims_head[1])*batch_size*sizeof(float),cudaMemcpyDeviceToHost);
-
+    auto end = std::chrono::system_clock::now();
+    std::cout <<"box and score memcpy " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
 
     vector<vector<float>> box_wh = xyxy2cxywh(box);
 
