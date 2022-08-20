@@ -198,24 +198,14 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
     
     context_head->enqueueV2(buffers_head.data(),0,nullptr);
 
-    // vector<float> box(getSizeByDim(output_dims_head[0])*batch_size);
-    // float box[score_size*score_size*4*batch_size];
-    // float score[score_size*score_size*batch_size];
-    // cudaMemcpy(box.data(), buffers_head[7],box.size()*sizeof(float),cudaMemcpyDeviceToHost);
+    // cudaDeviceSynchronize();
 
     auto start = std::chrono::system_clock::now();
 
-
-    cudaMemcpy(box, buffers_head[7],getSizeByDim(output_dims_head[0])*batch_size*sizeof(float),cudaMemcpyDeviceToHost);
-
-    // vector<float> score(getSizeByDim(output_dims_head[1])*batch_size);
+    cudaMemcpyAsync(box, buffers_head[7],getSizeByDim(output_dims_head[0])*batch_size*sizeof(float),cudaMemcpyDeviceToHost);
+    cudaMemcpyAsync(score, buffers_head[8],getSizeByDim(output_dims_head[1])*batch_size*sizeof(float),cudaMemcpyDeviceToHost);
     
-    // std::cout<<"getSizeByDim(output_dims_head[1] "<<getSizeByDim(output_dims_head[1])<<endl;
-    // std::cout<<"getSizeByDim(output_dims_head[0] "<<getSizeByDim(output_dims_head[0])<<endl;
-    cudaMemcpy(score, buffers_head[8],getSizeByDim(output_dims_head[1])*batch_size*sizeof(float),cudaMemcpyDeviceToHost);
-    auto end = std::chrono::system_clock::now();
-    std::cout <<"box and score memcpy " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
-
+    cudaStreamSynchronize(0);
     vector<vector<float>> box_wh = xyxy2cxywh(box);
 
     vector<float> pscore;
@@ -226,7 +216,8 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
     int best_pscore_id = distance(pscore.begin(), max_pscore_it);
     
     _postprocess_box(score[best_pscore_id],box_wh[best_pscore_id],penalty[best_pscore_id],new_target_pos,new_target_sz);
-
+    auto end = std::chrono::system_clock::now();
+    std::cout <<"post process " << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << "us" << std::endl;
     pscores.push_back(score[best_pscore_id]);
 
 }
@@ -365,18 +356,20 @@ void stmtracker::memorize()
     // cudaMemcpy(buffers_base_m[0], data, batch_size * 3 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice);
     // cudaStream_t stream_m;
     // cudaStreamCreate(&stream_m);
-    cudaMemcpyAsync(buffers_base_m[0], data_m, batch_size * 3 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice,stream_m);
+    // cudaMemcpyAsync(buffers_base_m[0], data_m, batch_size * 3 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice,stream_m);
+    cudaMemcpyAsync(buffers_base_m[0], data_m, batch_size * 3 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice);
     // cudaMemcpy(buffers_base_m[1], fg_bg_label_map, batch_size * 1 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpyAsync(buffers_base_m[1], fg_bg_label_map, batch_size * 1 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice,stream_m);
-    // context_base_m->enqueue(batch_size,buffers_base_m.data(),0,nullptr);
-    context_base_m->enqueueV2(buffers_base_m.data(),stream_m,nullptr);
+    // cudaMemcpyAsync(buffers_base_m[1], fg_bg_label_map, batch_size * 1 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice,stream_m);
+    cudaMemcpyAsync(buffers_base_m[1], fg_bg_label_map, batch_size * 1 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice);
+    context_base_m->enqueueV2(buffers_base_m.data(),0,nullptr);
+    // context_base_m->enqueueV2(buffers_base_m.data(),stream_m,nullptr);
     // context_base_m->executeV2(buffers_base_m.data());
     void * temp_ptr;
     // cudaMalloc(&temp_ptr, getSizeByDim(output_dims_base_m[0])* sizeof(float));
 
     cudaMalloc(&temp_ptr, getSizeByDim(output_dims_base_m[0])* sizeof(float));
-    cudaMemcpyAsync(temp_ptr,(float *) buffers_base_m[2],getSizeByDim(output_dims_base_m[0])*sizeof(float),cudaMemcpyDeviceToDevice,stream_m);
-    // cudaMemcpyAsync(temp_ptr,(float *) buffers_base_m[2],getSizeByDim(output_dims_base_m[0])*sizeof(float),cudaMemcpyDeviceToDevice);
+    // cudaMemcpyAsync(temp_ptr,(float *) buffers_base_m[2],getSizeByDim(output_dims_base_m[0])*sizeof(float),cudaMemcpyDeviceToDevice,stream_m);
+    cudaMemcpyAsync(temp_ptr,(float *) buffers_base_m[2],getSizeByDim(output_dims_base_m[0])*sizeof(float),cudaMemcpyDeviceToDevice);
 
     all_memory_frame_feats.push_back(temp_ptr);
     return;
