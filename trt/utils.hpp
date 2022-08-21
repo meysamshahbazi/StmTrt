@@ -23,6 +23,9 @@
 
 using namespace cv;
 
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
+
 
 // #include <opencv2/core/cuda_stream_accessor.hpp>
 using namespace std;
@@ -71,5 +74,23 @@ Mat get_hann_win(Size sz);
 void postprocessResults(float * gpu_output,const nvinfer1::Dims &dims, int batch_size, std::string file_name);
 
 std::vector<vector<float>> xyxy2cxywh(float *box);
+/*
+__global__ void fill_m(float * fg_bg,int * xyxy)
+{
+
+    int x1 = xyxy[0];
+    int y1 = xyxy[1];
+    int x2 = xyxy[2];
+    int y2 = xyxy[3];
+
+    if( threadIdx.x> x1-1 && threadIdx.x <x2+1 && threadIdx.y> y1-1 && threadIdx.y <y2+1 )
+        fg_bg[blockDim.x*threadIdx.y+threadIdx.x ] = 1.0;
+    else 
+        fg_bg[blockDim.x*threadIdx.y+threadIdx.x ] = 0.0;
+
+    
+    return;
+}
+*/
 
 #endif

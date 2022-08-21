@@ -1,6 +1,12 @@
 #include "stmtracker.hpp"
 // #include "utils.hpp"
 
+
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
+
+
+
 #define batch_size 1
 stmtracker::stmtracker(/* args */)
 {
@@ -338,12 +344,29 @@ void stmtracker::memorize()
         }
     }
 
+    
     int x1 = (m_size-1)/2 - target_sz_prior.width*real_scale/2;
     int y1 = (m_size-1)/2 - target_sz_prior.height*real_scale/2;
     int x2 = (m_size-1)/2 + target_sz_prior.width*real_scale/2;
     int y2 = (m_size-1)/2 + target_sz_prior.height*real_scale/2;
+/*
+    int xyxy[4];
+    xyxy[0] = (m_size-1)/2 - target_sz_prior.width*real_scale/2;
+    xyxy[1] = (m_size-1)/2 - target_sz_prior.height*real_scale/2;
+    xyxy[2] = (m_size-1)/2 + target_sz_prior.width*real_scale/2;
+    xyxy[3] = (m_size-1)/2 + target_sz_prior.height*real_scale/2;
+
+    dim3 dim_m(m_size,m_size);
+    dim3 b(1);
+    int * d_xyxy;
+    cudaMalloc((void **)&d_xyxy, 4*sizeof(int));
+    cudaMemcpyAsync(xyxy,d_xyxy,4*sizeof(int),cudaMemcpyHostToDevice);
+*/
+    // fill_m <<<dim_m,32 >>>(buffers_base_m[1],d_xyxy);
+
 
     // float fg_bg_label_map[m_size * m_size] ;
+    
     for (int i = 0; i < m_size; i++)
         for (int j = 0; j < m_size ; j++)
         {
@@ -353,23 +376,24 @@ void stmtracker::memorize()
                 fg_bg_label_map[m_size*i+j ] = 0.0;
         }
 
+
     // cudaMemcpy(buffers_base_m[0], data, batch_size * 3 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice);
     // cudaStream_t stream_m;
     // cudaStreamCreate(&stream_m);
-    // cudaMemcpyAsync(buffers_base_m[0], data_m, batch_size * 3 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice,stream_m);
-    cudaMemcpyAsync(buffers_base_m[0], data_m, batch_size * 3 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpyAsync(buffers_base_m[0], data_m, batch_size * 3 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice,stream_m);
+    // cudaMemcpyAsync(buffers_base_m[0], data_m, batch_size * 3 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice);
     // cudaMemcpy(buffers_base_m[1], fg_bg_label_map, batch_size * 1 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice);
-    // cudaMemcpyAsync(buffers_base_m[1], fg_bg_label_map, batch_size * 1 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice,stream_m);
-    cudaMemcpyAsync(buffers_base_m[1], fg_bg_label_map, batch_size * 1 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice);
-    context_base_m->enqueueV2(buffers_base_m.data(),0,nullptr);
-    // context_base_m->enqueueV2(buffers_base_m.data(),stream_m,nullptr);
+    cudaMemcpyAsync(buffers_base_m[1], fg_bg_label_map, batch_size * 1 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice,stream_m);
+    // cudaMemcpyAsync(buffers_base_m[1], fg_bg_label_map, batch_size * 1 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice);
+    // context_base_m->enqueueV2(buffers_base_m.data(),0,nullptr);
+    context_base_m->enqueueV2(buffers_base_m.data(),stream_m,nullptr);
     // context_base_m->executeV2(buffers_base_m.data());
     void * temp_ptr;
     // cudaMalloc(&temp_ptr, getSizeByDim(output_dims_base_m[0])* sizeof(float));
 
     cudaMalloc(&temp_ptr, getSizeByDim(output_dims_base_m[0])* sizeof(float));
-    // cudaMemcpyAsync(temp_ptr,(float *) buffers_base_m[2],getSizeByDim(output_dims_base_m[0])*sizeof(float),cudaMemcpyDeviceToDevice,stream_m);
-    cudaMemcpyAsync(temp_ptr,(float *) buffers_base_m[2],getSizeByDim(output_dims_base_m[0])*sizeof(float),cudaMemcpyDeviceToDevice);
+    cudaMemcpyAsync(temp_ptr,(float *) buffers_base_m[2],getSizeByDim(output_dims_base_m[0])*sizeof(float),cudaMemcpyDeviceToDevice,stream_m);
+    // cudaMemcpyAsync(temp_ptr,(float *) buffers_base_m[2],getSizeByDim(output_dims_base_m[0])*sizeof(float),cudaMemcpyDeviceToDevice);
 
     all_memory_frame_feats.push_back(temp_ptr);
     return;
