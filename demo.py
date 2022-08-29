@@ -94,13 +94,13 @@ for f, img_file in enumerate(img_files):
                         (255,0,0), 2)
                         
                 line = str(pred[0])+','+str(pred[1])+','+str(pred[2])+','+str(pred[3])+'\n'
-                print(line)
+                # print(line)
                 # my_file.writelines(line)
-                # cv2.imshow(g,image)
-                # # print("FPS:s ",1/times[f])
+                cv2.imshow(g,image)
+                print("FPS: ",1/times[f])
                 # cv2.waitKey(0)        
-                # if cv2.waitKey(1)  == 27:
-                #         break
+                if cv2.waitKey(1)  == 27:
+                        break
 
 # my_file.close()
 cv2.destroyAllWindows()
