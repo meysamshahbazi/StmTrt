@@ -15,6 +15,10 @@ make
 
 - [x] some cleaning code 
 
+- [ ] add `#ifdef` for seprating x86 and aarch64
+
+- [ ] int8 calibration 
+
 - [x] work on `get_crop_single()` function
 
 - [ ] use fp16 `__half` for data

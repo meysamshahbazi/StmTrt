@@ -1,16 +1,25 @@
 #include <opencv2/highgui.hpp>
 #include <iostream>
-
+#include "calibrator.hpp"
 #include "stmtracker.hpp"
-
+#include "calibrator.hpp"
 
 using namespace std;
 using namespace cv;
 
 
 
+
+
+
+
+
 int main(int argc, const char ** argv) 
 {
+    MyCalibrator mc(1,"/media/meysam/hdd/dataset/Dataset_UAV123/UAV123/data_seq/UAV123/car1_s/");
+
+
+    
     // set input video
     Rect2f roi = Rect(550.0f, 223.0f, 215.0f, 272.0f); // xywh format  
     Mat frame;

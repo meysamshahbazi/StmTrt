@@ -411,7 +411,7 @@ void stmtracker::memorize()
     all_memory_frame_feats.push_back(temp_ptr);
     return;
 }
-
+/*
 void stmtracker::get_crop_single(Mat & im,Point2f target_pos_,
                                 float target_scale,int output_sz,Scalar avg_chans,
                                 Mat &im_patch,float &real_scale) // these are output 
@@ -494,6 +494,7 @@ void stmtracker::get_crop_single(Mat & im,Point2f target_pos_,
 
     real_scale = static_cast<float>(output_sz)/((br.x-tl.x+1)*df) ;   
 }
+*/
 
 stmtracker::~stmtracker()
 {

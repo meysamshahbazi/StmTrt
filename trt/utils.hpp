@@ -42,6 +42,10 @@ struct  TRTDestroy
     }
 };
 
+void get_crop_single(Mat & im,Point2f target_pos_,
+                                float target_scale,int output_sz,Scalar avg_chans,
+                                Mat &im_patch,float &real_scale); // these are output 
+
 class Logger : public nvinfer1::ILogger
 {
 void log(Severity severity, const char* msg) noexcept override
@@ -59,6 +63,11 @@ void parseOnnxModel(    const string &model_path,
                         size_t pool_size,
                         unique_ptr<nvinfer1::ICudaEngine,TRTDestroy> &engine,
                         unique_ptr<nvinfer1::IExecutionContext,TRTDestroy> &context);
+
+void parseOnnxModelINT8(    const string &model_path,
+                            size_t pool_size,
+                            unique_ptr<nvinfer1::ICudaEngine,TRTDestroy> &engine,
+                            unique_ptr<nvinfer1::IExecutionContext,TRTDestroy> &context);
 
 void parseEngineModel(  const string &engine_file_path,
                         unique_ptr<nvinfer1::ICudaEngine,TRTDestroy> &engine,
