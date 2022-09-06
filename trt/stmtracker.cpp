@@ -38,7 +38,8 @@ stmtracker::stmtracker(/* args */)
     for (size_t i = 0; i < engine_base_q->getNbBindings(); ++i)
     {
         auto binding_size = getSizeByDim(engine_base_q->getBindingDimensions(i)) * batch_size * sizeof(float);
-        cudaMalloc(&buffers_base_q[i], binding_size);
+        // cudaMalloc(&buffers_base_q[i], binding_size);
+        cudaMallocManaged(&buffers_base_q[i], binding_size);
         std::cout<<engine_base_q->getBindingName(i)<<std::endl;
         if (engine_base_q->bindingIsInput(i))
         {
@@ -54,7 +55,8 @@ stmtracker::stmtracker(/* args */)
     for (size_t i = 0; i < engine_base_m->getNbBindings(); ++i)
     {
         auto binding_size = getSizeByDim(engine_base_m->getBindingDimensions(i)) * batch_size * sizeof(float);
-        cudaMalloc(&buffers_base_m[i], binding_size);
+        // cudaMalloc(&buffers_base_m[i], binding_size);
+        cudaMallocManaged(&buffers_base_m[i], binding_size);
         std::cout<<engine_base_m->getBindingName(i)<<std::endl;
         if (engine_base_m->bindingIsInput(i))
         {
@@ -85,9 +87,9 @@ stmtracker::stmtracker(/* args */)
     
     cudaStreamCreate(&stream_m);
     
-    cudaMallocHost((void **)&data_q, 1 * 3 * q_size * q_size*sizeof(float));
-    cudaMallocHost((void **)&data_m, 1 * 3 * m_size * m_size*sizeof(float));
-    cudaMallocHost((void **)&fg_bg_label_map, m_size * m_size*sizeof(float));
+    // cudaMallocHost((void **)&data_q, 1 * 3 * q_size * q_size*sizeof(float));
+    // cudaMallocHost((void **)&data_m, 1 * 3 * m_size * m_size*sizeof(float));
+    // cudaMallocHost((void **)&fg_bg_label_map, m_size * m_size*sizeof(float));
 
     cudaMallocHost((void **)&box, score_size*score_size*4*batch_size*sizeof(float));
 
@@ -170,6 +172,8 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
     
     // float data_q[1 * 3 * q_size * q_size];
     int data_idx = 0;
+    data_q = (float * )buffers_base_q[0];
+    // #define data_qq buffers_base_q[0]
     for (int i = 0; i < im_q_crop.rows; ++i)
     {
         uchar* pixel = im_q_crop.ptr<uchar>(i);  // point to first color in row
@@ -182,7 +186,7 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
         }
     }
     
-    cudaMemcpyAsync(buffers_base_q[0], data_q, batch_size * 3 * q_size * q_size * sizeof(float), cudaMemcpyHostToDevice);
+    // cudaMemcpyAsync(buffers_base_q[0], data_q, batch_size * 3 * q_size * q_size * sizeof(float), cudaMemcpyHostToDevice);
 
     // context_base_q->enqueue(batch_size,buffers_base_q.data(),0,nullptr);
     context_base_q->enqueueV2(buffers_base_q.data(),0,nullptr);
@@ -223,7 +227,7 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
     
     _postprocess_box(score[best_pscore_id],box_wh[best_pscore_id],penalty[best_pscore_id],new_target_pos,new_target_sz);
     auto end = std::chrono::system_clock::now();
-    std::cout <<"post process " << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << "us" << std::endl;
+    // std::cout <<"post process " << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << "us" << std::endl;
     pscores.push_back(score[best_pscore_id]);
 
 }
@@ -331,7 +335,7 @@ void stmtracker::memorize()
     get_crop_single(last_img,target_pos,scale_m,m_size,avg_chans,im_m_crop,real_scale);
 
     int data_idx = 0;
-
+    data_m = (float * ) buffers_base_m[0];
     for (int i = 0; i < im_m_crop.rows; ++i)
     {
         uchar* pixel = im_m_crop.ptr<uchar>(i);  // point to first color in row
@@ -366,7 +370,8 @@ void stmtracker::memorize()
 
 
     // float fg_bg_label_map[m_size * m_size] ;
-    
+    fg_bg_label_map = (float *) buffers_base_m[1];
+
     for (int i = 0; i < m_size; i++)
         for (int j = 0; j < m_size ; j++)
         {
@@ -380,19 +385,27 @@ void stmtracker::memorize()
     // cudaMemcpy(buffers_base_m[0], data, batch_size * 3 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice);
     // cudaStream_t stream_m;
     // cudaStreamCreate(&stream_m);
-    cudaMemcpyAsync(buffers_base_m[0], data_m, batch_size * 3 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice,stream_m);
+
+    // cudaMemcpyAsync(buffers_base_m[0], data_m, batch_size * 3 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice,stream_m);
+
+
     // cudaMemcpyAsync(buffers_base_m[0], data_m, batch_size * 3 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice);
     // cudaMemcpy(buffers_base_m[1], fg_bg_label_map, batch_size * 1 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpyAsync(buffers_base_m[1], fg_bg_label_map, batch_size * 1 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice,stream_m);
+
+    // cudaMemcpyAsync(buffers_base_m[1], fg_bg_label_map, batch_size * 1 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice,stream_m);
+
     // cudaMemcpyAsync(buffers_base_m[1], fg_bg_label_map, batch_size * 1 * m_size * m_size * sizeof(float), cudaMemcpyHostToDevice);
+
+    void * temp_ptr;
+    cudaMalloc(&temp_ptr, getSizeByDim(output_dims_base_m[0])* sizeof(float));
+    buffers_base_m[2] = temp_ptr;
     // context_base_m->enqueueV2(buffers_base_m.data(),0,nullptr);
     context_base_m->enqueueV2(buffers_base_m.data(),stream_m,nullptr);
     // context_base_m->executeV2(buffers_base_m.data());
-    void * temp_ptr;
-    // cudaMalloc(&temp_ptr, getSizeByDim(output_dims_base_m[0])* sizeof(float));
+    
 
-    cudaMalloc(&temp_ptr, getSizeByDim(output_dims_base_m[0])* sizeof(float));
-    cudaMemcpyAsync(temp_ptr,(float *) buffers_base_m[2],getSizeByDim(output_dims_base_m[0])*sizeof(float),cudaMemcpyDeviceToDevice,stream_m);
+    // cudaMalloc(&temp_ptr, getSizeByDim(output_dims_base_m[0])* sizeof(float));
+    // cudaMemcpyAsync(temp_ptr,(float *) buffers_base_m[2],getSizeByDim(output_dims_base_m[0])*sizeof(float),cudaMemcpyDeviceToDevice,stream_m);
     // cudaMemcpyAsync(temp_ptr,(float *) buffers_base_m[2],getSizeByDim(output_dims_base_m[0])*sizeof(float),cudaMemcpyDeviceToDevice);
 
     all_memory_frame_feats.push_back(temp_ptr);
@@ -498,9 +511,9 @@ stmtracker::~stmtracker()
 
     cudaStreamDestroy(stream_m);
 
-    cudaFreeHost(data_q);
-    cudaFreeHost(data_m);
-    cudaFreeHost(fg_bg_label_map);
+    // cudaFreeHost(data_q);
+    // cudaFreeHost(data_m);
+    // cudaFreeHost(fg_bg_label_map);
     cudaFreeHost(box);
     cudaFreeHost(score);
 

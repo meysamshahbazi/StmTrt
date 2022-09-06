@@ -73,6 +73,11 @@ void parseOnnxModel(const string & onnx_path,
     {
         config->setFlag(nvinfer1::BuilderFlag::kFP16);
     }
+
+    // builder->platformHasFastInt8
+    
+    // config->setInt8Calibrator
+
     // setm max bach size as it is very importannt for trt
     // builder->setMaxBatchSize(1);
     // create engine and excution context

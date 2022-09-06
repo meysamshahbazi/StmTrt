@@ -1,0 +1,11 @@
+rm -rf .git
+rm -rf .vscode/
+rm -rf .ipynb_checkpoints/
+rm -rf __pycache__/
+rm -rf *.engine
+rm -rf *.pth
+rm -rf *.pkl
+rm -rf test_trt/
+rm -rf *.py
+rm -rf Untitled.ipynb
+rm -rf trt/build/
