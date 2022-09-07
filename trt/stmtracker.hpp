@@ -72,8 +72,8 @@ private:
     Scalar avg_chans;// this has 4 value and the order is not the same as in python
     Mat last_img;
     std::vector<float> pscores;
-    int cur_frame_idx {0};
-    const float search_area_factor {4.0};
+    int cur_frame_idx{0};
+    const float search_area_factor{4.0};
     const int q_size{289};
     const int m_size{289};
     float target_scale;

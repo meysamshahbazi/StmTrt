@@ -38,6 +38,8 @@ private:
     const int64 img_size = 289*289;
     void * device_binind;
     int img_index;
+    // this contans all img files pathes and bboxs
+    std::vector< std::vector<std::string> > img_path_bb;
     
 public: 
     MyCalibrator(int32_t batch_size,std::string image_path);
