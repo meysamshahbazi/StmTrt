@@ -16,7 +16,15 @@ using namespace cv;
 
 int main(int argc, const char ** argv) 
 {
-    MyCalibrator mc(1,"/media/meysam/hdd/dataset/Dataset_UAV123/UAV123/data_seq/UAV123/car1_s/");
+    // MyCalibrator mc(1,
+    // "/media/meysam/hdd/dataset/Dataset_UAV123/UAV123/data_seq/UAV123/car1_s/",
+    // "");
+
+
+    const string  model_path_base_q{"../../backbone_q.onnx"};
+    unique_ptr<nvinfer1::ICudaEngine,TRTDestroy> engine_base_q{nullptr};
+    unique_ptr<nvinfer1::IExecutionContext,TRTDestroy> context_base_q{nullptr};
+    parseOnnxModelINT8(model_path_base_q,1U<<30,engine_base_q,context_base_q);
 
 
     /*

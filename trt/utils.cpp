@@ -146,10 +146,53 @@ void parseOnnxModelINT8(const string & onnx_path,
     unique_ptr<nvinfer1::IBuilderConfig,TRTDestroy> config{builder->createBuilderConfig()};
     config->setMemoryPoolLimit(nvinfer1::MemoryPoolType::kWORKSPACE,pool_size);
     // config->setMaxWorkspaceSize(1U<<30);
-    // auto calibrator = new nvinfer1::IInt8EntropyCalibrator2();
-    // config->setInt8Calibrator()
+    std::unique_ptr<nvinfer1::IInt8Calibrator,TRTDestroy> calibrator;
+    calibrator.reset(
+    new MyCalibrator(8,
+                    "/media/meysam/hdd/dataset/Dataset_UAV123/UAV123/data_seq/UAV123/car1_s/"
+                    ,"calb.txt") ) ;
 
+    if (builder->platformHasFastInt8())
+    {
+        std::cout<<"platformHasFastInt8 platformHasFastInt8 platformHasFastInt8 platformHasFastInt8"<<endl;
+        // config->setFlsag(nvinfer1::BuilderFlag::kFP16);
+    }
+    // void * temp;
+    // const char * nme = "img";
+    // calibrator->getBatch(&temp,&nme,1);     
+
+    config->setFlag(nvinfer1::BuilderFlag::kINT8);           
+    config->setInt8Calibrator(calibrator.get());
+    
+    unique_ptr<nvinfer1::IHostMemory,TRTDestroy> serializedModel{builder->buildSerializedNetwork(*network, *config)};
+    cout<<"im here"<<endl;
+    nvinfer1::IRuntime* runtime = nvinfer1::createInferRuntime(logger);
+
+    engine.reset(runtime->deserializeCudaEngine( serializedModel->data(), serializedModel->size()) );
+
+    // serializedModel->
+    // auto tmp = builder->buildEngineWithConfig(*network,*config);
+    // engine.reset(builder->buildEngineWithConfig(*network,*config));
+    // engine.reset(builder->buildSerializedNetwork(*network,*config));
+    context.reset(engine->createExecutionContext());
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void parseOnnxModel(const string & onnx_path,
                     size_t pool_size,
                     unique_ptr<nvinfer1::ICudaEngine,TRTDestroy> &engine,
@@ -181,6 +224,7 @@ void parseOnnxModel(const string & onnx_path,
     {
         config->setFlag(nvinfer1::BuilderFlag::kFP16);
     }
+    
 
     // builder->platformHasFastInt8
     

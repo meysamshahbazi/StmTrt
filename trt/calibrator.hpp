@@ -15,7 +15,7 @@
 #include <opencv2/cudaarithm.hpp>
 #include <algorithm>
 #include <numeric>
-
+#include <iterator>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -34,15 +34,19 @@ class MyCalibrator: public nvinfer1::IInt8Calibrator
 private:
     int32_t batch_size;
     std::string image_path;
+    std::string calib_table_path;
+    std::vector<char> calibration_cache;
+
     std::vector<std::string> img_list;
     const int64 img_size = 289*289;
     void * device_binind;
     int img_index;
+    bool read_cache{false};
     // this contans all img files pathes and bboxs
     std::vector< std::vector<std::string> > img_path_bb;
     
 public: 
-    MyCalibrator(int32_t batch_size,std::string image_path);
+    MyCalibrator(int32_t batch_size,std::string image_path,std::string calib_table_path);
     ~MyCalibrator() = default;
     int32_t getBatchSize() const noexcept override ;
     virtual bool getBatch(void* bindings[], char const* names[], int32_t nbBindings) noexcept;

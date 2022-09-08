@@ -18,7 +18,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-
+#include "calibrator.hpp"
 #include <opencv2/imgproc.hpp>
 
 using namespace cv;

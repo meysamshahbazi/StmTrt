@@ -7,17 +7,18 @@
 
 int32_t MyCalibrator::getBatchSize() const noexcept 
 {
+    
     return batch_size;
 }
 
-MyCalibrator::MyCalibrator(int32_t batch_size,std::string image_path)
-    :batch_size{batch_size},image_path{image_path}
+MyCalibrator::MyCalibrator(int32_t batch_size,std::string image_path, std::string calib_table_path)
+    :batch_size{batch_size},image_path{image_path},calib_table_path{calib_table_path}
 {
-    for (const auto & entry : fs::directory_iterator(image_path))
-        img_list.push_back(entry.path());
+    // for (const auto & entry : fs::directory_iterator(image_path))
+    //     img_list.push_back(entry.path());
 
-    img_list.resize(static_cast<int>(img_list.size()/batch_size)*batch_size );
-    std::random_shuffle(img_list.begin(),img_list.end(),[](int i){return rand()%i;});
+    // img_list.resize(static_cast<int>(img_list.size()/batch_size)*batch_size );
+    // std::random_shuffle(img_list.begin(),img_list.end(),[](int i){return rand()%i;});
     cudaMalloc(&device_binind, batch_size*img_size*3*sizeof(float));
     img_index = 0;
 
@@ -43,17 +44,18 @@ MyCalibrator::MyCalibrator(int32_t batch_size,std::string image_path)
     }
 
     std::random_shuffle(img_path_bb.begin(),img_path_bb.end());
-/*
-    for( const auto l : img_path_bb)
+    
+    /*for( const auto l : img_path_bb)
     {
         cv::Mat img = cv::imread(l.at(0));
-        cv::Rect roi 
-        
+        cv::Rect roi =  
+        cv::Rect(std::atoi(l[1].c_str()), std::atoi(l[2].c_str()),
+                        std::atoi(l[3].c_str()), std::atoi(l[4].c_str()));
         cv::rectangle(img, roi, Scalar(255, 0, 0), 1, 1);
         cv::imshow("frame",img);
         if (cv::waitKey(1000) == 27) return;
-    }
-*/
+    } */
+
 }
 
 
@@ -61,6 +63,7 @@ bool MyCalibrator::getBatch(void* bindings[], char const* names[], int32_t nbBin
 {
     // if we have already leaded all images 
     // we will return false in order to exit from image loading
+    
     if(img_index + batch_size >= img_path_bb.size()) return false;
     
     // otherwise we can load next batch:
@@ -71,6 +74,7 @@ bool MyCalibrator::getBatch(void* bindings[], char const* names[], int32_t nbBin
     const float search_area_factor {4.0};
     float batch_blob[batch_size * 3 * q_size * q_size];
     int offset_index = 0;
+    
     for(int in_bacth_index{0}; in_bacth_index<batch_size;in_bacth_index++,img_index++)
     {
         std::vector<std::string> l = img_path_bb.at(img_index); 
@@ -102,22 +106,52 @@ bool MyCalibrator::getBatch(void* bindings[], char const* names[], int32_t nbBin
 
         offset_index += 3*q_size*q_size;
     }
+    
     cudaMemcpy( device_binind,batch_blob,
                 batch_size * 3 * q_size * q_size*sizeof(float),
                 cudaMemcpyHostToDevice);
+    
     bindings[0] = device_binind;
     return true;
+    
 }
 void const* MyCalibrator::readCalibrationCache(std::size_t& length) noexcept
 {
-    return nullptr;
+   void* output;
+    calibration_cache.clear();
+    assert(!calib_table_path.empty());
+    std::ifstream input(calib_table_path, std::ios::binary);
+    input >> std::noskipws;
+    if (read_cache && input.good())
+        std::copy(std::istream_iterator<char>(input), std::istream_iterator<char>(),
+                  std::back_inserter(calibration_cache));
+
+    length = calibration_cache.size();
+    if (length)
+    {
+        std::cout << "Using cached calibration table to build the engine" << std::endl;
+        output = &calibration_cache[0];
+    }
+
+    else
+    {
+        std::cout << "New calibration table will be created to build the engine" << std::endl;
+        output = nullptr;
+    }
+
+    return output;
+
 }
 void MyCalibrator::writeCalibrationCache(void const* ptr, std::size_t length) noexcept
 {
+    assert(!calib_table_path.empty());
+    std::ofstream output(calib_table_path, std::ios::binary);
+    output.write(reinterpret_cast<const char*>(ptr), length);
+    output.close();
     return;
 }
 nvinfer1::CalibrationAlgoType MyCalibrator::getAlgorithm() noexcept
 {
-    return nvinfer1::CalibrationAlgoType::kLEGACY_CALIBRATION;
+    return nvinfer1::CalibrationAlgoType::kMINMAX_CALIBRATION;
 }
 
