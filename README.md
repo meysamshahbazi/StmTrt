@@ -17,7 +17,7 @@ make
 
 - [ ] add `#ifdef` for seprating x86 and aarch64
 
-- [ ] int8 calibration 
+- [ ] int8 calibration (use regular funtion for calibriaction and make them generic)
 
 - [x] work on `get_crop_single()` function
 
