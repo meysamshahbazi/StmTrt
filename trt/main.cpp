@@ -21,13 +21,13 @@ int main(int argc, const char ** argv)
     // "");
 
 
-    const string  model_path_base_q{"../../backbone_q.onnx"};
-    unique_ptr<nvinfer1::ICudaEngine,TRTDestroy> engine_base_q{nullptr};
-    unique_ptr<nvinfer1::IExecutionContext,TRTDestroy> context_base_q{nullptr};
-    parseOnnxModelINT8(model_path_base_q,1U<<30,engine_base_q,context_base_q);
+    // const string  model_path_base_q{"../../backbone_q.onnx"};
+    // unique_ptr<nvinfer1::ICudaEngine,TRTDestroy> engine_base_q{nullptr};
+    // unique_ptr<nvinfer1::IExecutionContext,TRTDestroy> context_base_q{nullptr};
+    // parseOnnxModelINT8(model_path_base_q,1U<<30,engine_base_q,context_base_q);
 
 
-    /*
+    
     // set input video
     Rect2f roi = Rect(550.0f, 223.0f, 215.0f, 272.0f); // xywh format  
     Mat frame;
@@ -71,7 +71,7 @@ int main(int argc, const char ** argv)
     
     
     return 0;
-    */
+
 }
 
 

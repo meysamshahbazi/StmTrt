@@ -148,7 +148,7 @@ void parseOnnxModelINT8(const string & onnx_path,
     // config->setMaxWorkspaceSize(1U<<30);
     std::unique_ptr<nvinfer1::IInt8Calibrator,TRTDestroy> calibrator;
     calibrator.reset(
-    new MyCalibrator(8,
+    new MyCalibrator(2,
                     "/media/meysam/hdd/dataset/Dataset_UAV123/UAV123/data_seq/UAV123/car1_s/"
                     ,"calb.txt") ) ;
 
@@ -176,21 +176,6 @@ void parseOnnxModelINT8(const string & onnx_path,
     // engine.reset(builder->buildSerializedNetwork(*network,*config));
     context.reset(engine->createExecutionContext());
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 void parseOnnxModel(const string & onnx_path,

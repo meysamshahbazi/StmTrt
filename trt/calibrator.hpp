@@ -41,7 +41,7 @@ private:
     const int64 img_size = 289*289;
     void * device_binind;
     int img_index;
-    bool read_cache{false};
+    bool read_cache{true};
     // this contans all img files pathes and bboxs
     std::vector< std::vector<std::string> > img_path_bb;
     
