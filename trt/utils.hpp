@@ -66,6 +66,7 @@ void parseOnnxModel(    const string &model_path,
 
 void parseOnnxModelINT8(    const string &model_path,
                             size_t pool_size,
+                            calibration_model cal_type,
                             unique_ptr<nvinfer1::ICudaEngine,TRTDestroy> &engine,
                             unique_ptr<nvinfer1::IExecutionContext,TRTDestroy> &context);
 

@@ -128,6 +128,7 @@ void get_crop_single(Mat & im,Point2f target_pos_,
 
 void parseOnnxModelINT8(const string & onnx_path,
                     size_t pool_size,
+                    calibration_model cal_type,
                     unique_ptr<nvinfer1::ICudaEngine,TRTDestroy> &engine,
                     unique_ptr<nvinfer1::IExecutionContext,TRTDestroy> &context)
 
@@ -147,12 +148,23 @@ void parseOnnxModelINT8(const string & onnx_path,
     config->setMemoryPoolLimit(nvinfer1::MemoryPoolType::kWORKSPACE,pool_size);
     // config->setMaxWorkspaceSize(1U<<30);
     std::unique_ptr<nvinfer1::IInt8Calibrator,TRTDestroy> calibrator;
-    calibrator.reset(
-    new MyCalibrator(2,
+    if(cal_type == calibration_model::BASE_Q)
+    {
+        calibrator.reset(
+        new MyCalibrator(2,
                     "/media/meysam/hdd/dataset/Dataset_UAV123/UAV123/data_seq/UAV123/car1_s/"
-                    ,"calb.txt") ) ;
+                    ,"calb_q.txt",cal_type) ) ;
+    }
+    
+    if(cal_type == calibration_model::MEMORIZE)
+    {
+        calibrator.reset(
+        new MyCalibrator(2,
+                    "/media/meysam/hdd/dataset/Dataset_UAV123/UAV123/data_seq/UAV123/car1_s/"
+                    ,"calb_m.txt",cal_type) ) ;
+    }
 
-    if (builder->platformHasFastInt8())
+    if (builder->platformHasFastInt8() )
     {
         std::cout<<"platformHasFastInt8 platformHasFastInt8 platformHasFastInt8 platformHasFastInt8"<<endl;
         // config->setFlsag(nvinfer1::BuilderFlag::kFP16);
