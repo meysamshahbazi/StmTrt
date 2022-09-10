@@ -7,7 +7,6 @@
 
 int32_t MyCalibrator::getBatchSize() const noexcept 
 {
-    
     return batch_size;
 }
 
@@ -29,8 +28,7 @@ MyCalibrator::MyCalibrator( int32_t batch_size,std::string image_path,
         cudaMalloc(&device_binind, batch_size*img_size*3*sizeof(float));
         cudaMalloc(&device_binind_fg_bg, batch_size*img_size*1*sizeof(float));
     }
-        
-    
+
     img_index = 0;
 
     // ../../../uav123dl/uav123_random_frame.txt
@@ -75,6 +73,7 @@ bool MyCalibrator::getBatch(void* bindings[], char const* names[], int32_t nbBin
     // if we have already leaded all images 
     // we will return false in order to exit from image loading
     if(img_index + batch_size >= img_path_bb.size()) return false;
+
     if(cal_type == calibration_model::BASE_Q)
     {
         getBatch_Q(bindings, names, nbBindings);
@@ -83,8 +82,8 @@ bool MyCalibrator::getBatch(void* bindings[], char const* names[], int32_t nbBin
     {
         getBatch_M(bindings, names, nbBindings);
     }
+
     return true;
-    
 }
 
 void MyCalibrator::getBatch_Q(void* bindings[], char const* names[], int32_t nbBindings) noexcept
@@ -168,9 +167,9 @@ void MyCalibrator::getBatch_M(void* bindings[], char const* names[], int32_t nbB
             uchar* pixel = im_q_crop.ptr<uchar>(i);  // point to first color in row
             for (int j = 0; j < im_q_crop.cols; ++j)
             {
-                batch_blob[offset_index + data_idx] = *pixel++;
-                batch_blob[offset_index + data_idx+q_size*q_size] = *pixel++;
-                batch_blob[offset_index + data_idx+2*q_size*q_size] = *pixel++;
+                batch_blob[3*offset_index + data_idx] = *pixel++;
+                batch_blob[3*offset_index + data_idx+q_size*q_size] = *pixel++;
+                batch_blob[3*offset_index + data_idx+2*q_size*q_size] = *pixel++;
                 data_idx++;
             }
         }
@@ -185,17 +184,14 @@ void MyCalibrator::getBatch_M(void* bindings[], char const* names[], int32_t nbB
             for (int j = 0; j < q_size ; j++)
             {
                 if( j> x1-1 && j <x2+1 && i> y1-1 && i <y2+1 )
-                    fg_bg_label_map[q_size*i+j ] = 1.0;
+                    fg_bg_label_map[offset_index + q_size*i+j ] = 1.0;
                 else 
-                    fg_bg_label_map[q_size*i+j ] = 0.0;
+                    fg_bg_label_map[offset_index + q_size*i+j ] = 0.0;
             }
 
-        offset_index += 3*q_size*q_size;
+        offset_index += q_size*q_size;
     }
     
-
-    
-
     cudaMemcpy( device_binind,batch_blob,
                 batch_size * 3 * q_size * q_size*sizeof(float),
                 cudaMemcpyHostToDevice);
@@ -233,8 +229,8 @@ void const* MyCalibrator::readCalibrationCache(std::size_t& length) noexcept
     }
 
     return output;
-
 }
+
 void MyCalibrator::writeCalibrationCache(void const* ptr, std::size_t length) noexcept
 {
     assert(!calib_table_path.empty());
@@ -243,6 +239,7 @@ void MyCalibrator::writeCalibrationCache(void const* ptr, std::size_t length) no
     output.close();
     return;
 }
+
 nvinfer1::CalibrationAlgoType MyCalibrator::getAlgorithm() noexcept
 {
     return nvinfer1::CalibrationAlgoType::kMINMAX_CALIBRATION;
