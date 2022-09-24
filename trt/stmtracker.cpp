@@ -28,9 +28,7 @@ stmtracker::stmtracker(/* args */)
     // parseEngineModel(engine_path_head,engine_base_m,context_base_m);
     
     parseOnnxModel(model_path_head,1U<<24,engine_head,context_head);
-    
-    // const string  head_path{"../../head.engine"};
-    // serializeOnnx2engine(engine_head,head_path);
+
 
     buffers_base_q.reserve(engine_base_q->getNbBindings());
     buffers_base_m.reserve(engine_base_m->getNbBindings());

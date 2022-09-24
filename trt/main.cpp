@@ -7,27 +7,8 @@
 using namespace std;
 using namespace cv;
 
-
-
-
-
-
-
-
 int main(int argc, const char ** argv) 
 {
-    // MyCalibrator mc(1,
-    // "/media/meysam/hdd/dataset/Dataset_UAV123/UAV123/data_seq/UAV123/car1_s/",
-    // "");
-
-
-    // const string  model_path_base_q{"../../backbone_q.onnx"};
-    // unique_ptr<nvinfer1::ICudaEngine,TRTDestroy> engine_base_q{nullptr};
-    // unique_ptr<nvinfer1::IExecutionContext,TRTDestroy> context_base_q{nullptr};
-    // parseOnnxModelINT8(model_path_base_q,1U<<30,engine_base_q,context_base_q);
-
-
-    
     // set input video
     Rect2f roi = Rect(550.0f, 223.0f, 215.0f, 272.0f); // xywh format  
     Mat frame;
@@ -39,17 +20,15 @@ int main(int argc, const char ** argv)
     cap >> frame;
     stmtracker st;
     st.init(frame,roi);
-    
     rectangle( frame, roi, Scalar( 255, 0, 0 ), 2, 1 );
-        
     imshow("tracker",frame);
     // waitKey(0);
     int64 tick_counter = 0;
     int frame_idx = 1;
-    for ( ;; ){
+    for ( ;; )
+    {
         // get frame from the video
         cap >> frame;
-
         // stop the program if no more images
         if(frame.rows==0 || frame.cols==0)
             break;
@@ -62,18 +41,10 @@ int main(int argc, const char ** argv)
         // Rect roi_int = 
         cout << "FPS: " << ((double)(frame_idx)) / (static_cast<double>(tick_counter) / cv::getTickFrequency()) << endl;
         rectangle( frame, roi, Scalar( 255, 0, 0 ), 2, 1 );
-        
         imshow("tracker",frame);
-
-        // waitKey(0);
+        
         if(waitKey(1)==27) break;
     }    
-    
-    
+
     return 0;
-
 }
-
-
-
-
