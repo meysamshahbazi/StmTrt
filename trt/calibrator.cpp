@@ -206,7 +206,7 @@ void MyCalibrator::getBatch_M(void* bindings[], char const* names[], int32_t nbB
 
 void const* MyCalibrator::readCalibrationCache(std::size_t& length) noexcept
 {
-   void* output;
+    void* output;
     calibration_cache.clear();
     assert(!calib_table_path.empty());
     std::ifstream input(calib_table_path, std::ios::binary);
