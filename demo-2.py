@@ -9,21 +9,23 @@ import time
 import math
 # import torch.nn.functional as F
 
-from net import *
+from net2 import Efficientnet_b0_M, Efficientnet_b0_Q, AdjustLayer1, STMHead1
 from utils import *
 from tracker import *
 
 
-backbone_m = Inception3_M()
+backbone_m = Efficientnet_b0_M()
 backbone_m.update_params()
-backbone_q = Inception3_Q()
+backbone_q = Efficientnet_b0_Q()
 backbone_q.update_params()
-neck_m = AdjustLayer()
+neck_m = AdjustLayer1()
 neck_m.update_params()
-neck_q = AdjustLayer()
+neck_q = AdjustLayer1()
 neck_q.update_params()
-head = STMHead()
+head = STMHead1()
 head.update_params()
+
+print(neck_m)
 
 model = STMTrack(backbone_m, backbone_q, neck_m, neck_q, head)
 # model.update_params()
@@ -31,9 +33,9 @@ model = STMTrack(backbone_m, backbone_q, neck_m, neck_q, head)
 # Convert BatchNorm to SyncBatchNorm 
 # task_model = convert_model(task_model)
 
-model_file = "new-epoch-19.pkl"
-model_file = "/home/meysam/test-apps/STMTrack/epoch-19_got10k.pkl"
-# model_file = "/home/meysam/test-apps/STMTrack/snapshots/stmtrack-googlenet-got-train/final_model.pkl"
+# model_file = "new-epoch-19.pkl"
+# model_file = "/home/meysam/test-apps/STMTrack/epoch-19_got10k.pkl"
+model_file = "/home/meysam/test-apps/STMTrack/snapshots/stmtrack-effnet-got-train/epoch-0.pkl"
 # model_file = "epoch-19.pkl"
 
 extra_keys = ["r_z_k.conv.weight", "r_z_k.conv.bias", "r_z_k.bn.weight", "r_z_k.bn.bias", "r_z_k.bn.running_mean", "r_z_k.bn.running_var", "r_z_k.bn.num_batches_tracked", "c_z_k.conv.weight", "c_z_k.conv.bias", "c_z_k.bn.weight", "c_z_k.bn.bias", "c_z_k.bn.running_mean", "c_z_k.bn.running_var", "c_z_k.bn.num_batches_tracked", "r_x.conv.weight", "r_x.conv.bias", "r_x.bn.weight", "r_x.bn.bias", "r_x.bn.running_mean", "r_x.bn.running_var", "r_x.bn.num_batches_tracked", "c_x.conv.weight", "c_x.conv.bias", "c_x.bn.weight", "c_x.bn.bias", "c_x.bn.running_mean", "c_x.bn.running_var", "c_x.bn.num_batches_tracked"]

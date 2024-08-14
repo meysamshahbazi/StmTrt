@@ -15,14 +15,15 @@ stmtracker::stmtracker(/* args */)
     // saveEngineFile("../../memorize.onnx","../../memorize.engine");
     // saveEngineFile("../../head.onnx","../../head.engine");
 
+    // return;
     // parseOnnxModel(model_path_base_q,1U<<24,engine_base_q,context_base_q);
-    parseOnnxModelINT8(model_path_base_q,1U<<24, calibration_model::BASE_Q,engine_base_q,context_base_q);
-    // const string  engine_path_base_q{"../../backbone_q.engine"};
-    // parseEngineModel(engine_path_base_q,engine_base_q,context_base_q);
+    // parseOnnxModelINT8(model_path_base_q,1U<<24, calibration_model::BASE_Q,engine_base_q,context_base_q);
+    const string  engine_path_base_q{"../../backbone_q.engine"};
+    parseEngineModel(engine_path_base_q,engine_base_q,context_base_q);
     // parseOnnxModel(model_path_base_m,1U<<24,engine_base_m,context_base_m);
-    parseOnnxModelINT8(model_path_base_m,1U<<24, calibration_model::MEMORIZE,engine_base_m,context_base_m);
-    // const string  engine_path_base_m{"../../memorize.engine"};
-    // parseEngineModel(engine_path_base_m,engine_base_m,context_base_m);
+    // parseOnnxModelINT8(model_path_base_m,1U<<24, calibration_model::MEMORIZE,engine_base_m,context_base_m);
+    const string  engine_path_base_m{"../../memorize.engine"};
+    parseEngineModel(engine_path_base_m,engine_base_m,context_base_m);
 
     // const string  engine_path_head{"../../head.engine"};
     // parseEngineModel(engine_path_head,engine_base_m,context_base_m);

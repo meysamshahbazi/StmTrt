@@ -13,6 +13,67 @@ from collections import OrderedDict
 import torch.nn.functional as F
 from utils import *
 
+from torchvision.models.efficientnet import efficientnet_b0
+
+class Efficientnet_b0_M(nn.Module):
+    
+
+    def __init__(self, transform_input=False):
+        super(Efficientnet_b0_M, self).__init__()
+        self.default_hyper_params = dict(
+            pretrained=True
+        )
+        effnet = efficientnet_b0(pretrained=self._hyper_params['pretrained'])
+        self.l1 = effnet.features[0]
+        self.feat_ = effnet.features[1:4]
+        self.proj_fg_bg_label_map = nn.Conv2d(1, 32, kernel_size=3, stride=2, padding=1, bias=False)
+        torch.nn.init.normal_(self.proj_fg_bg_label_map.weight, std=0.01)
+
+    def forward(self, x, fg_bg_label_map=None):
+        bias = 255 / 2
+        x_ch0 = (torch.unsqueeze(x[:, 2], 1) - bias) / bias
+        x_ch1 = (torch.unsqueeze(x[:, 1], 1) - bias) / bias
+        x_ch2 = (torch.unsqueeze(x[:, 0], 1) - bias) / bias
+        x = torch.cat((x_ch0, x_ch1, x_ch2), 1)
+        # N x 3 x 299 x 299
+        x = self.l1(x) + self.proj_fg_bg_label_map(fg_bg_label_map)
+        x = self.feat_(x)
+        return x
+    
+    # def update_params(self):
+    #     super().update_params()
+    #     self.pretrained = self._hyper_params['pretrained']
+
+
+
+
+class Efficientnet_b0_Q(nn.Module):
+
+
+    def __init__(self, transform_input=False):
+        super(Efficientnet_b0_Q, self).__init__()
+        self.default_hyper_params = dict(
+            pretrained=True
+        )
+        effnet = efficientnet_b0(pretrained=self._hyper_params['pretrained'])
+        self.feat_ = effnet.features[0:4]
+
+    def forward(self, x, fg_bg_label_map=None):
+        bias = 255 / 2
+        x_ch0 = (torch.unsqueeze(x[:, 2], 1) - bias) / bias
+        x_ch1 = (torch.unsqueeze(x[:, 1], 1) - bias) / bias
+        x_ch2 = (torch.unsqueeze(x[:, 0], 1) - bias) / bias
+        x = torch.cat((x_ch0, x_ch1, x_ch2), 1)
+        x = self.feat_(x)
+        return x
+    
+    # def update_params(self):
+    #     super().update_params()
+    #     self.pretrained = self._hyper_params['pretrained']
+
+
+
+
 class conv_bn_relu(nn.Module):
     def __init__(self,
                  in_channel,
@@ -595,8 +656,8 @@ class AdjustLayer(nn.Module):
     def __init__(self):
         super(AdjustLayer, self).__init__()
         self.default_hyper_params = dict(
-        in_channels=768,
-        out_channels=512,
+        in_channels=40,
+        out_channels=20,
         )
 
     def forward(self, x):
@@ -658,9 +719,9 @@ class STMHead(nn.Module):
         self.default_hyper_params = dict(
         total_stride=8,
         score_size=25,
-        q_size=289,#
+        q_size=200,#
         input_size_adapt=False,
-        in_channels=512,
+        in_channels=20,
         )
         self.bi = torch.nn.Parameter(torch.tensor(0.).type(torch.Tensor))
         self.si = torch.nn.Parameter(torch.tensor(1.).type(torch.Tensor))
@@ -874,9 +935,15 @@ class STMTrack(nn.Module):
             fq = self.neck_q(fq)  # B, C, H, W
 
             # print("fm size: ",fm.shape)
+            # print("fq size: ",fq.shape)
 
             fcos_cls_score_final, fcos_ctr_score_final, fcos_bbox_final = self.head(
                 fm, fq, search_img.size(-1))
+            
+            print("fcos_cls_score_final size: ",fcos_cls_score_final.shape)
+            print("fcos_ctr_score_final size: ",fcos_ctr_score_final.shape)
+            print("fcos_bbox_final size: ",fcos_bbox_final.shape)
+            
             # apply sigmoid
             # print("fcos_bbox_final ",fcos_bbox_final.shape)
             fcos_cls_prob_final = torch.sigmoid(fcos_cls_score_final)
@@ -925,6 +992,65 @@ class STMTrack(nn.Module):
             for loss_name in self.loss:
                 self.loss[loss_name].to(dev)
 
+
+# from torchvision.models.efficientnet import *
+
+# class Efficientnet_b0_M(nn.Module):
+#     default_hyper_params = dict(
+#         pretrained=True
+#     )
+
+#     def __init__(self, transform_input=False):
+#         super(Efficientnet_b0_M, self).__init__()
+#         effnet = efficientnet_b0(pretrained=self._hyper_params['pretrained'])
+#         self.l1 = effnet.features[0]
+#         self.feat_ = effnet.features[1:4]
+#         self.proj_fg_bg_label_map = nn.Conv2d(1, 32, kernel_size=3, stride=2, padding=1, bias=False)
+#         torch.nn.init.normal_(self.proj_fg_bg_label_map.weight, std=0.01)
+
+#     def forward(self, x, fg_bg_label_map=None):
+#         bias = 255 / 2
+#         x_ch0 = (torch.unsqueeze(x[:, 2], 1) - bias) / bias
+#         x_ch1 = (torch.unsqueeze(x[:, 1], 1) - bias) / bias
+#         x_ch2 = (torch.unsqueeze(x[:, 0], 1) - bias) / bias
+#         x = torch.cat((x_ch0, x_ch1, x_ch2), 1)
+#         # N x 3 x 299 x 299
+#         x = self.l1(x) + self.proj_fg_bg_label_map(fg_bg_label_map)
+#         x = self.feat_(x)
+#         return x
+    
+#     def update_params(self):
+#         pass
+#         # super().update_params()
+#         # self.pretrained = self._hyper_params['pretrained']
+
+
+
+# # @VOS_BACKBONES.register
+# # @TRACK_BACKBONES.register
+# class Efficientnet_b0_Q(nn.Module):
+#     default_hyper_params = dict(
+#         pretrained=True
+#     )
+
+#     def __init__(self, transform_input=False):
+#         super(Efficientnet_b0_Q, self).__init__()
+#         effnet = efficientnet_b0(pretrained=self._hyper_params['pretrained'])
+#         self.feat_ = effnet.features[0:4]
+
+#     def forward(self, x, fg_bg_label_map=None):
+#         bias = 255 / 2
+#         x_ch0 = (torch.unsqueeze(x[:, 2], 1) - bias) / bias
+#         x_ch1 = (torch.unsqueeze(x[:, 1], 1) - bias) / bias
+#         x_ch2 = (torch.unsqueeze(x[:, 0], 1) - bias) / bias
+#         x = torch.cat((x_ch0, x_ch1, x_ch2), 1)
+#         x = self.feat_(x)
+#         return x
+    
+#     def update_params(self):
+#         pass
+#         # super().update_params()
+#         # self.pretrained = self._hyper_params['pretrained']
 
 
 

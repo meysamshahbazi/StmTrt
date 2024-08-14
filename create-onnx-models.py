@@ -23,9 +23,9 @@ import onnx
 # In[11]:
 
 
-backbone_m = Inception3_M()
+backbone_m = Efficientnet_b0_M()
 backbone_m.update_params()
-backbone_q = Inception3_Q()
+backbone_q = Efficientnet_b0_Q()
 backbone_q.update_params()
 neck_m = AdjustLayer()
 neck_m.update_params()

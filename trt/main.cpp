@@ -19,6 +19,7 @@ int main(int argc, const char ** argv)
     // get bounding box
     cap >> frame;
     stmtracker st;
+    // return -1;
     st.init(frame,roi);
     rectangle( frame, roi, Scalar( 255, 0, 0 ), 2, 1 );
     imshow("tracker",frame);
