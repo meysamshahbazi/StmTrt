@@ -20,13 +20,25 @@
 #include <fstream>
 #include <string>
 #include <algorithm>
-#include "utils.hpp"
+
 #include <opencv2/core/types.hpp>
+
+
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
+
+// #include "tracking_algorithm.h"
+#include "trt_utils.h"
+#include "cudaWarp.h"
+#include "cudaResize.h"
+#include "cudaCrop.h"
+
+#include <opencv2/cudawarping.hpp>
 
 using namespace std;
 using namespace cv;
 
-class stmtracker
+class stmtracker/*  : public TrackerAlgorithm */
 {
 private:
     float *data_q;
@@ -46,67 +58,90 @@ private:
     const string  model_path_head{"../../eff-onnx/head.onnx"};
     unique_ptr<nvinfer1::ICudaEngine,TRTDestroy> engine_head{nullptr};
     unique_ptr<nvinfer1::IExecutionContext,TRTDestroy> context_head{nullptr};
+
     // int32_t size_buf_base_q{2};
-    vector<void *> buffers_base_q;
-    vector<void *> buffers_base_m;
-    vector<void *> buffers_head;
+    std::vector<void *> buffers_base_q;
+    std::vector<void *> buffers_base_m;
+    std::vector<void *> buffers_head;
 
-    vector<nvinfer1::Dims> input_dims_base_q;
-    vector<nvinfer1::Dims> output_dims_base_q;
-    vector<nvinfer1::Dims> input_dims_base_m;
-    vector<nvinfer1::Dims> output_dims_base_m;
-    vector<nvinfer1::Dims> input_dims_head;
-    vector<nvinfer1::Dims> output_dims_head;
+    std::vector<nvinfer1::Dims> input_dims_base_q;
+    std::vector<nvinfer1::Dims> output_dims_base_q;
+    std::vector<nvinfer1::Dims> input_dims_base_m;
+    std::vector<nvinfer1::Dims> output_dims_base_m;
+    std::vector<nvinfer1::Dims> input_dims_head;
+    std::vector<nvinfer1::Dims> output_dims_head;
 
-    Point2f target_pos;
-    Size2f target_sz;
+    uchar4 *im_m_crop_ptr;
+    uchar4 *im_q_crop_ptr;
+
+    cv::Point2f target_pos;
+    cv::Size2f target_sz;
     
-    int im_h;
-    int im_w;
-    int min_w{10};
-    int min_h{10};
+    const int min_w{10};
+    const int min_h{10};
 
     const int score_size{25};
     Mat window;
-    vector<void *> all_memory_frame_feats; // TODO: change this
-    Scalar avg_chans;// this has 4 value and the order is not the same as in python
-    Mat last_img;
+    float* d_window{nullptr};
+    std::vector<void *> all_memory_frame_feats; // TODO: change this
+    Scalar avg_chans; // this has 4 value and the order is not the same as in python
+    // Mat last_img;
+    int last_fd;
     std::vector<float> pscores;
     int cur_frame_idx{0};
     const float search_area_factor{4.0};
     const int q_size{200};
     const int m_size{200};
     float target_scale;
-    Size2f base_target_sz;
+    cv::Size2f base_target_sz;
 
     float window_influence{0.21};
 
-    Point2f target_pos_prior;
-    Size2f target_sz_prior;
+    cv::Point2f target_pos_prior;
+    cv::Size2f target_sz_prior;
 
     const int num_segments=4;
-    cv::Point2f scale_q;
+    float scale_q;
     float penalty_k=0.04;
 
     float test_lr{0.95};
 
-    vector<int> select_representatives(int cur_frame_idx);
-    void _postprocess_score(float * score,const vector<vector<float>> &box_wh,vector<float> &pscore,vector<float> &penalty);
+    void create_trt_buffer();
+    void load_trt_engines();
+    
+    std::vector<int> select_representatives(int cur_frame_idx);
+    void _postprocess_score(float * score,const std::vector<std::vector<float>> &box_wh,std::vector<float> &pscore,std::vector<float> &penalty);
     float change(float r);
     float sz(float w,float h);
-    void _postprocess_box(float score_best,vector<float> box_best,float penalty_best,Point2f &new_target_pos,Size2f &new_target_sz);
+    void _postprocess_box(float score_best,std::vector<float> box_best,float penalty_best,cv::Point2f &new_target_pos,cv::Size2f &new_target_sz);
+    void createWindow();
+    std::vector<std::vector<float>> xyxy2cxywh(float *box);
 
+    void get_crop_single(int fd, Point2f target_pos_,
+                                float target_scale, float* blob, 
+                                uchar4* im_patch, float &real_scale,
+                                cudaStream_t stream = 0); 
+
+    void get_crop_single2(int fd, Point2f target_pos_,
+                                float target_scale, float* blob, 
+                                uchar4* im_patch, float &real_scale,
+                                cudaStream_t stream = 0); 
+
+
+    void memorize();
+    void track(int fd, std::vector<void *> &features,cv::Point2f &new_target_pos, cv::Size2f &new_target_sz);
+
+    void create_fg_bg_label_map(float* fg_bg, cv::Rect2i &bb, cudaStream_t stream);
 
 public:
-    stmtracker(/* args */);
+    // stmtracker() = delete;
+    stmtracker(/* OutVidConf_t vid_conf_ */);
     ~stmtracker();
-    void init(Mat im, Rect2f state);
-    Rect2f update(Mat im);
-    void memorize();
-    void track(Mat im,vector<void *> &features,Point2f &new_target_pos, Size2f &new_target_sz);
+    void init(cv::Mat im, const cv::Rect2f state);
+    cv::Rect2f update(cv::Mat im);
+
+    static void gen_engine_from_onnx();
+    
 };
-
-
-
 
 #endif

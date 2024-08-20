@@ -23,6 +23,8 @@ int main(int argc, const char ** argv)
     // get bounding box
     cap >> frame;
     cv::resize(frame , frame, cv::Size2i(1920, 1080));
+    CudaProcess cup(frame);
+    auto ptr_ = cup.getImgPtr();
     stmtracker st;
     // return -1;
     st.init(frame,roi);

@@ -8,6 +8,7 @@
 #include <cuda_runtime.h>
 #include <opencv2/imgproc.hpp>
 
+
 using namespace std;
 
 class CudaProcess
@@ -22,6 +23,7 @@ public:
 private:
     cv::Mat im;
     void* im_ptr;
+    uchar4 *im_bgra_ptr;
 };
 
 #endif
