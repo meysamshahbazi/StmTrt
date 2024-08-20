@@ -37,13 +37,13 @@ private:
     
     cudaStream_t stream_m;
     Logger logger;
-    const string  model_path_base_q{"../../backbone_q.onnx"};
+    const string  model_path_base_q{"../../eff-onnx/backbone_q.onnx"};
     unique_ptr<nvinfer1::ICudaEngine,TRTDestroy> engine_base_q{nullptr};
     unique_ptr<nvinfer1::IExecutionContext,TRTDestroy> context_base_q{nullptr};
-    const string  model_path_base_m{"../../memorize.onnx"};
+    const string  model_path_base_m{"../../eff-onnx/memorize.onnx"};
     unique_ptr<nvinfer1::ICudaEngine,TRTDestroy> engine_base_m{nullptr};
     unique_ptr<nvinfer1::IExecutionContext,TRTDestroy> context_base_m{nullptr};
-    const string  model_path_head{"../../head.onnx"};
+    const string  model_path_head{"../../eff-onnx/head.onnx"};
     unique_ptr<nvinfer1::ICudaEngine,TRTDestroy> engine_head{nullptr};
     unique_ptr<nvinfer1::IExecutionContext,TRTDestroy> context_head{nullptr};
     // int32_t size_buf_base_q{2};
@@ -74,8 +74,8 @@ private:
     std::vector<float> pscores;
     int cur_frame_idx{0};
     const float search_area_factor{4.0};
-    const int q_size{289};
-    const int m_size{289};
+    const int q_size{200};
+    const int m_size{200};
     float target_scale;
     Size2f base_target_sz;
 
@@ -85,7 +85,7 @@ private:
     Size2f target_sz_prior;
 
     const int num_segments=4;
-    float scale_q;
+    cv::Point2f scale_q;
     float penalty_k=0.04;
 
     float test_lr{0.95};

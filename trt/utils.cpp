@@ -33,7 +33,7 @@ size_t getSizeByDim(const nvinfer1::Dims& dims)
 
 void get_crop_single(Mat & im,Point2f target_pos_,
                                 float target_scale,int output_sz,Scalar avg_chans,
-                                Mat &im_patch,float &real_scale) // these are output 
+                                Mat &im_patch, Point2f &real_scale) // these are output 
 {
     // reversed pos!! 
     // pos is target_pos
@@ -44,8 +44,7 @@ void get_crop_single(Mat & im,Point2f target_pos_,
     int df = std::max(static_cast<int>(resize_factor-0.1),1);
     Mat im2;
 
-    if (df > 1)
-    {
+    if (df > 1) {
         // Point2i os = Point2i(static_cast<int>(target_pos_.x) % df,static_cast<int>(target_pos_.y) % df);
         Point2i os = Point2i( posl.x % df, posl.y % df);
         std::vector<uchar> im_rows;
@@ -76,7 +75,7 @@ void get_crop_single(Mat & im,Point2f target_pos_,
                 pixel += 3*df-3;
             }
         }
-        im2 = cv::Mat(reduced_row_sz, reduced_col_sz, CV_8UC3,img_data);
+        im2 = cv::Mat(reduced_row_sz, reduced_col_sz, CV_8UC3, img_data);
     }
     else
     {
@@ -111,7 +110,8 @@ void get_crop_single(Mat & im,Point2f target_pos_,
                     avg_chans
     ); 	
 
-    real_scale = static_cast<float>(output_sz)/((br.x-tl.x+1)*df) ;   
+    real_scale.x = static_cast<float>(output_sz)/((br.x-tl.x+1)*df);   
+    real_scale.y = static_cast<float>(output_sz)/((br.y-tl.y+1)*df);   
 }
 
 

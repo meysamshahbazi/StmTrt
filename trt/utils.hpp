@@ -38,7 +38,7 @@ struct  TRTDestroy
 
 void get_crop_single(Mat & im,Point2f target_pos_,
                                 float target_scale,int output_sz,Scalar avg_chans,
-                                Mat &im_patch,float &real_scale); // these are output 
+                                Mat &im_patch, Point2f &real_scale); // these are output 
 
 class Logger : public nvinfer1::ILogger
 {

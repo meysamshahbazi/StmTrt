@@ -90,7 +90,7 @@ void MyCalibrator::getBatch_Q(void* bindings[], char const* names[], int32_t nbB
 {
     int q_size = 289;
     cv::Mat im_q_crop;
-    float scale_q;
+    cv::Point2f scale_q;
     const float search_area_factor {4.0};
     float batch_blob[batch_size * 3 * q_size * q_size];
     int offset_index = 0;
@@ -138,7 +138,7 @@ void MyCalibrator::getBatch_M(void* bindings[], char const* names[], int32_t nbB
 {
     int q_size = 289;
     cv::Mat im_q_crop;
-    float real_scale;
+    cv::Point2f real_scale;
     const float search_area_factor {4.0};
     float batch_blob[batch_size * 3 * q_size * q_size];
     float fg_bg_label_map[batch_size * 1 * q_size * q_size];
@@ -174,10 +174,10 @@ void MyCalibrator::getBatch_M(void* bindings[], char const* names[], int32_t nbB
             }
         }
 
-        int x1 = (q_size-1)/2 - target_sz.width*real_scale/2;
-        int y1 = (q_size-1)/2 - target_sz.height*real_scale/2;
-        int x2 = (q_size-1)/2 + target_sz.width*real_scale/2;
-        int y2 = (q_size-1)/2 + target_sz.height*real_scale/2;
+        int x1 = (q_size-1)/2 - target_sz.width*real_scale.x/2;
+        int y1 = (q_size-1)/2 - target_sz.height*real_scale.y/2;
+        int x2 = (q_size-1)/2 + target_sz.width*real_scale.x/2;
+        int y2 = (q_size-1)/2 + target_sz.height*real_scale.y/2;
 
         
         for (int i = 0; i < q_size; i++)

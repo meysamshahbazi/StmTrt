@@ -11,18 +11,18 @@
 stmtracker::stmtracker(/* args */)
 {
 
-    // saveEngineFile("../../backbone_q.onnx","../../backbone_q.engine");
-    // saveEngineFile("../../memorize.onnx","../../memorize.engine");
-    // saveEngineFile("../../head.onnx","../../head.engine");
+    // saveEngineFile("../../eff-onnx/backbone_q.onnx","../../eff-onnx/backbone_q.engine");
+    // saveEngineFile("../../eff-onnx/memorize.onnx","../../eff-onnx/memorize.engine");
+    // saveEngineFile("../../eff-onnx/head.onnx","../../eff-onnx/head.engine");
 
     // return;
     // parseOnnxModel(model_path_base_q,1U<<24,engine_base_q,context_base_q);
     // parseOnnxModelINT8(model_path_base_q,1U<<24, calibration_model::BASE_Q,engine_base_q,context_base_q);
-    const string  engine_path_base_q{"../../backbone_q.engine"};
+    const string  engine_path_base_q{"../../eff-onnx/backbone_q.engine"};
     parseEngineModel(engine_path_base_q,engine_base_q,context_base_q);
     // parseOnnxModel(model_path_base_m,1U<<24,engine_base_m,context_base_m);
     // parseOnnxModelINT8(model_path_base_m,1U<<24, calibration_model::MEMORIZE,engine_base_m,context_base_m);
-    const string  engine_path_base_m{"../../memorize.engine"};
+    const string  engine_path_base_m{"../../eff-onnx/memorize.engine"};
     parseEngineModel(engine_path_base_m,engine_base_m,context_base_m);
 
     // const string  engine_path_head{"../../head.engine"};
@@ -168,8 +168,8 @@ Rect2f stmtracker::update(Mat im)
 void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos, Size2f &new_target_sz)
 {
     Mat im_q_crop;
-   
-    get_crop_single(im_q,target_pos_prior,target_scale,q_size,avg_chans,im_q_crop,scale_q);
+    
+    get_crop_single(im_q,target_pos_prior,target_scale,q_size,avg_chans,im_q_crop, scale_q);
     
     // float data_q[1 * 3 * q_size * q_size];
     int data_idx = 0;
@@ -194,7 +194,8 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
     // context_base_q->executeV2(buffers_base_q.data());
 
     // now buffers_base_q[1] contains fq
-    #define FQ_SIZE 512*25*25
+    // #define FQ_SIZE 512*25*25
+    #define FQ_SIZE 20*25*25
     //-------------------------------------------------------------------------------------------------------------
     // the next two line is very important!! the first line is using memcpy that have cost, but using just pointers can solve our problem 
     // cudaMemcpy(buffers_head[1],buffers_base_q[1],batch_size*FQ_SIZE*sizeof(float),cudaMemcpyDeviceToDevice);
@@ -235,16 +236,16 @@ void stmtracker::track(Mat im_q,vector<void *> &features,Point2f &new_target_pos
 
 void stmtracker::_postprocess_box(float score_best,vector<float> box_best,float penalty_best,Point2f &new_target_pos,Size2f &new_target_sz)
 {
-    vector<float> pred_in_crop = {  box_best[0]/scale_q,
-                                    box_best[1]/scale_q,
-                                    box_best[2]/scale_q,
-                                    box_best[3]/scale_q
+    vector<float> pred_in_crop = {  box_best[0]/scale_q.x,
+                                    box_best[1]/scale_q.y,
+                                    box_best[2]/scale_q.x,
+                                    box_best[3]/scale_q.y
                                     };
 
     float lr = penalty_best*score_best*test_lr;
 
-    float res_x = pred_in_crop[0] + target_pos_prior.x - (q_size/2)/scale_q;
-    float res_y = pred_in_crop[1] + target_pos_prior.y - (q_size/2)/scale_q;
+    float res_x = pred_in_crop[0] + target_pos_prior.x - (q_size/2)/scale_q.x;
+    float res_y = pred_in_crop[1] + target_pos_prior.y - (q_size/2)/scale_q.y;
 
     float res_w = target_sz_prior.width*(1-lr)+pred_in_crop[2]*lr;
     float res_h = target_sz_prior.height*(1-lr)+pred_in_crop[3]*lr;
@@ -265,7 +266,7 @@ void stmtracker::_postprocess_score(float * score,const vector<vector<float>> &b
     pscore.clear();
     penalty.clear();
 
-    Size2f target_sz_in_crop = target_sz_prior*scale_q;
+    Size2f target_sz_in_crop = Size2f(target_sz_prior.width*scale_q.x,target_sz_prior.height*scale_q.y);
     // scale penalty
     for(int i=0; i <625; i++)
     {
@@ -331,9 +332,9 @@ void stmtracker::memorize()
     // const int m_siz{289};
     float scale_m = std::sqrt(target_sz_prior.area()/base_target_sz.area());
     Mat im_m_crop;
-    float real_scale;
+    cv::Point2f real_scale;
     // float data_m[1 * 3 * m_size * m_size];
-    get_crop_single(last_img,target_pos,scale_m,m_size,avg_chans,im_m_crop,real_scale);
+    get_crop_single(last_img,target_pos,scale_m,m_size,avg_chans,im_m_crop, real_scale);
 
     int data_idx = 0;
     data_m = (float * ) buffers_base_m[0];
@@ -350,10 +351,10 @@ void stmtracker::memorize()
     }
 
     
-    int x1 = (m_size-1)/2 - target_sz_prior.width*real_scale/2;
-    int y1 = (m_size-1)/2 - target_sz_prior.height*real_scale/2;
-    int x2 = (m_size-1)/2 + target_sz_prior.width*real_scale/2;
-    int y2 = (m_size-1)/2 + target_sz_prior.height*real_scale/2;
+    int x1 = (m_size-1)/2 - target_sz_prior.width*real_scale.x/2;
+    int y1 = (m_size-1)/2 - target_sz_prior.height*real_scale.y/2;
+    int x2 = (m_size-1)/2 + target_sz_prior.width*real_scale.x/2;
+    int y2 = (m_size-1)/2 + target_sz_prior.height*real_scale.y/2;
 /*
     int xyxy[4];
     xyxy[0] = (m_size-1)/2 - target_sz_prior.width*real_scale/2;
