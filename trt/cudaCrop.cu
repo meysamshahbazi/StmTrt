@@ -1,5 +1,6 @@
 #include "cudaCrop.h"
 
+#include <iostream>
 
 __global__ void DownsampleGPU(uchar4* srcImage, uchar4* dstImage, size_t src_width, size_t src_height,
 	int x0, int y0, int df, size_t dst_width, size_t dst_height)
@@ -21,15 +22,16 @@ __global__ void DownsampleGPU(uchar4* srcImage, uchar4* dstImage, size_t src_wid
 cudaError_t cudaDownsample( uchar4* srcDev, uchar4* dstDev, size_t src_width, size_t src_height,
 	int x0, int y0, int df, size_t dst_width, size_t dst_height, cudaStream_t stream)
 {
+	// std::cout << src_width << " , " << src_height <<", " << x0 << ", " << y0 << std::endl;
 	if( !srcDev || !dstDev )
 		return cudaErrorInvalidDevicePointer;
 
 	if( src_width == 0 || src_height == 0)
 		return cudaErrorInvalidValue;
 
-	const dim3 blockDim(32,8,1);
-	const dim3 gridDim(iDivUp(dst_width,blockDim.x), iDivUp(dst_height,blockDim.y), 1);
-
+	const dim3 blockDim(32,32);
+	const dim3 gridDim(iDivUp(dst_width,blockDim.x), iDivUp(dst_height,blockDim.y));
+	std::cout << blockDim.x << " , " << blockDim.y << " , " << gridDim.x << " , " << gridDim.y << std::endl;
 	DownsampleGPU<<<gridDim, blockDim,0,stream>>>( srcDev, dstDev, src_width, src_height, x0, y0, df, dst_width, dst_height);
 	
 	return CUDA(cudaGetLastError());

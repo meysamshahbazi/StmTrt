@@ -26,6 +26,12 @@
 #include <algorithm>
 #include <array>
 
+#include "cuproc.h"
+
+#include <opencv2/highgui.hpp>
+
+
+
 
 
 __global__ void gpuFillBlobRGBA_STM(uchar4* im_rgba, int model_sz, float* blob)
@@ -54,7 +60,7 @@ __global__ void gpuFillBlobRGBA_STM(uchar4* im_rgba, int model_sz, float* blob)
 
 
 
-void stmtracker::get_crop_single(int fd, Point2f target_pos_,
+void stmtracker::get_crop_single(cv::Mat fd, Point2f target_pos_,
                                 float target_scale, float* blob, 
                                 uchar4* im_patch, float &real_scale,
                                 cudaStream_t stream) // these are output 
@@ -79,11 +85,13 @@ void stmtracker::get_crop_single(int fd, Point2f target_pos_,
         reduced_col_sz = (im_hight - os.y+df-1)/df;
         cudaMalloc(&im2_ptr,reduced_row_sz*reduced_col_sz*4);
         void* img_ptr = cup.getImgPtr();
+
+        cout << im_width << " , " << im_hight << reduced_row_sz << ", " << reduced_col_sz << std::endl;
         cudaError_t res = cudaDownsample((uchar4* )img_ptr, im2_ptr, im_width, im_hight,
 	        os.x, os.y, df, reduced_row_sz, reduced_col_sz, stream); // TODO add Stream!
         
         if (res != cudaSuccess)
-            std::cout << " *** Error in cudaDownsample" << res << endl;
+            std::cout << " *** Error in cudaDownsample " << res << endl;
 
         // int nRows = im.rows;
         // int nCols = im.cols * channels;
@@ -194,7 +202,7 @@ __global__ void gpuCropFromRGBA_STM(uchar4* src, int xMin,int yMin,int xMax,int 
 
 
 
-void stmtracker::get_crop_single2(int fd, Point2f target_pos_,
+void stmtracker::get_crop_single2(cv::Mat fd, Point2f target_pos_,
                                 float target_scale, float* blob, 
                                 uchar4* im_patch, float &real_scale,
                                 cudaStream_t stream) // these are output 
@@ -212,6 +220,7 @@ void stmtracker::get_crop_single2(int fd, Point2f target_pos_,
     uchar4* im2_ptr;
     CudaProcess cup{fd};
     int reduced_row_sz, reduced_col_sz;
+    std::cout << df << std::endl;
     if (df > 1) {
         Point2i os = Point2i( posl.x % df, posl.y % df);
         posl = Point2i((posl.x-os.x)/df , (posl.y-os.y)/df);
@@ -219,11 +228,15 @@ void stmtracker::get_crop_single2(int fd, Point2f target_pos_,
         reduced_col_sz = (im_hight - os.y+df-1)/df;
         cudaMalloc(&im2_ptr,reduced_row_sz*reduced_col_sz*4);
         void* img_ptr = cup.getImgPtr();
+        // cout << im_width << " , " << im_hight <<", " << reduced_row_sz << ", " << reduced_col_sz << std::endl;
         cudaError_t res = cudaDownsample((uchar4* )img_ptr, im2_ptr, im_width, im_hight,
 	        os.x, os.y, df, reduced_row_sz, reduced_col_sz, stream); // TODO add Stream!
         
+        
         if (res != cudaSuccess)
-            std::cout << " *** Error in cudaDownsample" << res << endl;
+            std::cout << " *** Error in cudaDownsample " << res << endl;
+
+        
 
     }
     else {
@@ -231,6 +244,7 @@ void stmtracker::get_crop_single2(int fd, Point2f target_pos_,
         reduced_row_sz = im_width;
         reduced_col_sz = im_hight;
     }
+    
     
     float sz = sample_sz/df;
     
@@ -258,9 +272,10 @@ void stmtracker::get_crop_single2(int fd, Point2f target_pos_,
 
 
     int xMin = tl.x + leftPad;
-    int xMax = tl.y + leftPad;
-    int yMax = br.x + topPad;
-    int yMin = br.y + topPad;
+    int yMin = tl.y + topPad;
+
+    int xMax = br.x + leftPad;
+    int yMax = br.y + topPad;
 
 
     uchar4 *img_dst;
@@ -273,6 +288,15 @@ void stmtracker::get_crop_single2(int fd, Point2f target_pos_,
     const dim3 gridDim(iDivUp(int(xMax - xMin + 1),blockDim.x), iDivUp( int(yMax - yMin + 1),blockDim.y));
     gpuCropFromRGBA_STM<<<gridDim, blockDim,0 ,stream>>>( (uchar4 *)im2_ptr, int(xMin),int(yMin),int(xMax),int(yMax), int(xMax - xMin + 1),
                                             (uchar4 *) img_dst, reduced_row_sz, reduced_col_sz, reduced_row_sz);
+
+
+    // std::cout << (xMax - xMin + 1) << " , " << (yMax - yMin + 1) << std::endl;
+    // uchar *frame_ptr = new uchar[(xMax - xMin + 1)*(yMax - yMin + 1)*4];
+    // cudaMemcpy(frame_ptr, img_dst, (xMax - xMin + 1)*(yMax - yMin + 1)*4, cudaMemcpyDeviceToHost);
+    // cv::Mat frame = cv::Mat((yMax - yMin + 1), (xMax - xMin + 1), CV_8UC4, frame_ptr);
+    // cv::imshow("img_dst", frame);
+    // cv::waitKey(0);
+
 
     cudaResize( (uchar4*) img_dst,(size_t)(xMax - xMin + 1), (int)(yMax - yMin + 1), 
     (uchar4*) im_patch, output_sz, output_sz, FILTER_POINT, stream);

@@ -86,7 +86,7 @@ private:
     std::vector<void *> all_memory_frame_feats; // TODO: change this
     Scalar avg_chans; // this has 4 value and the order is not the same as in python
     // Mat last_img;
-    int last_fd;
+    Mat last_fd;
     std::vector<float> pscores;
     int cur_frame_idx{0};
     const float search_area_factor{4.0};
@@ -117,22 +117,23 @@ private:
     void createWindow();
     std::vector<std::vector<float>> xyxy2cxywh(float *box);
 
-    void get_crop_single(int fd, Point2f target_pos_,
+    void get_crop_single(cv::Mat fd, Point2f target_pos_,
                                 float target_scale, float* blob, 
                                 uchar4* im_patch, float &real_scale,
                                 cudaStream_t stream = 0); 
 
-    void get_crop_single2(int fd, Point2f target_pos_,
+    void get_crop_single2(cv::Mat fd, Point2f target_pos_,
                                 float target_scale, float* blob, 
                                 uchar4* im_patch, float &real_scale,
                                 cudaStream_t stream = 0); 
 
 
     void memorize();
-    void track(int fd, std::vector<void *> &features,cv::Point2f &new_target_pos, cv::Size2f &new_target_sz);
+    void track(Mat fd, std::vector<void *> &features,cv::Point2f &new_target_pos, cv::Size2f &new_target_sz);
 
     void create_fg_bg_label_map(float* fg_bg, cv::Rect2i &bb, cudaStream_t stream);
 
+    int im_width, im_hight;
 public:
     // stmtracker() = delete;
     stmtracker(/* OutVidConf_t vid_conf_ */);
@@ -141,6 +142,11 @@ public:
     cv::Rect2f update(cv::Mat im);
 
     static void gen_engine_from_onnx();
+
+
+    cv::Point2f getCenter(const cv::Rect2f &st) const;
+    cv::Rect2f state; // state in full size image!
+
     
 };
 

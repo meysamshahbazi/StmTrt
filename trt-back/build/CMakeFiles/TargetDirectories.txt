@@ -1,0 +1,3 @@
+/home/meysam/test-apps/StmTrt/trt/build/CMakeFiles/rebuild_cache.dir
+/home/meysam/test-apps/StmTrt/trt/build/CMakeFiles/edit_cache.dir
+/home/meysam/test-apps/StmTrt/trt/build/CMakeFiles/stmtracker.dir

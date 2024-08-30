@@ -6,30 +6,32 @@
 
 stmtracker::stmtracker() {
 
-    setImageParams();
+    // setImageParams();
+    im_width = 1920;
+    im_hight = 1080; 
     load_trt_engines();
-    create_trt_buffer();
-    cudaStreamCreate(&stream_m);
-    box = new float[score_size*score_size*4];
-    score = new float[score_size*score_size];
+    // create_trt_buffer();
+    // cudaStreamCreate(&stream_m);
+    // box = new float[score_size*score_size*4];
+    // score = new float[score_size*score_size];
 
-    // cudaMallocHost((void **)&box, score_size*score_size*4*batch_size*sizeof(float));
-    // cudaMallocHost((void **)&score, score_size*score_size*batch_size*sizeof(float));
+    // // cudaMallocHost((void **)&box, score_size*score_size*4*batch_size*sizeof(float));
+    // // cudaMallocHost((void **)&score, score_size*score_size*batch_size*sizeof(float));
 
 
-    // cudaMallocHost((void **)&box, score_size*score_size*4*batch_size*sizeof(float));
-    // cudaMallocHost((void **)&score, score_size*score_size*batch_size*sizeof(float));
-    cudaMalloc((void **)&im_q_crop_ptr, q_size*q_size*batch_size*sizeof(uchar4));
-    cudaMalloc((void **)&im_m_crop_ptr, m_size*m_size*batch_size*sizeof(uchar4));
-    createWindow();
+    // // cudaMallocHost((void **)&box, score_size*score_size*4*batch_size*sizeof(float));
+    // // cudaMallocHost((void **)&score, score_size*score_size*batch_size*sizeof(float));
+    // cudaMalloc((void **)&im_q_crop_ptr, q_size*q_size*batch_size*sizeof(uchar4));
+    // cudaMalloc((void **)&im_m_crop_ptr, m_size*m_size*batch_size*sizeof(uchar4));
+    // createWindow();
 }
 
-void stmtracker::init(cv::Mat im, const cv::Rect2f state_)
+void stmtracker::init(cv::Mat fd, const cv::Rect2f state_)
 {
     state = state_; 
-    target_pos = getCenter(state); // (state.br() + state.tl()) / 2;
+    target_pos =/*  getCenter(state); // */ (state.br() + state.tl()) / 2;
     target_sz = state.size();
-    last_im = fd;
+    last_fd = fd;
     pscores.clear();
     
     pscores.push_back(1.0f);
@@ -44,7 +46,7 @@ void stmtracker::init(cv::Mat im, const cv::Rect2f state_)
 }
 
 
-Rect2f stmtracker::update(int fd) {
+Rect2f stmtracker::update(cv::Mat fd) {
     target_pos_prior = target_pos;
     target_sz_prior = target_sz;
     
@@ -81,7 +83,7 @@ Rect2f stmtracker::update(int fd) {
 }
 
 
-void stmtracker::track(int fd, std::vector<void *> &features, cv::Point2f &new_target_pos, cv::Size2f &new_target_sz)
+void stmtracker::track(cv::Mat fd, std::vector<void *> &features, cv::Point2f &new_target_pos, cv::Size2f &new_target_sz)
 {
     /* cv::Mat im_q */
     // Mat im_q_crop;
@@ -207,6 +209,7 @@ void stmtracker::memorize() {
     float scale_m = std::sqrt(target_sz_prior.area()/base_target_sz.area());
     float real_scale;
     data_m = (float *) buffers_base_m[0];
+    
     get_crop_single2(last_fd, target_pos, scale_m, data_m, 
                                 im_m_crop_ptr, real_scale,
                                 /* cudaStream_t stream */0); // these are output 
@@ -272,15 +275,16 @@ void stmtracker::load_trt_engines() {
 #endif
 
 #ifdef LOAD_FROM_ENGINE
-    const string  engine_path_base_q{"/home/user/data/backbone_q.engine"};
+    const string  engine_path_base_q{"../../eff-onnx/backbone_q.engine"};
     parseEngineModel(engine_path_base_q,engine_base_q,context_base_q);
-    const string  engine_path_base_m{"/home/user/data/memorize.engine"};
+    const string  engine_path_base_m{"../../eff-onnx/memorize.engine"};
     parseEngineModel(engine_path_base_m,engine_base_m,context_base_m);
 
-    // const string  engine_path_head{"/home/user/data/head.engine"};
-    // parseEngineModel(engine_path_head,engine_base_m,context_base_m);
+    const string  engine_path_head{"../../eff-onnx/head.engine"};
+    parseEngineModel(engine_path_head,engine_head,context_head);
+
     // for head there is a bug in engine file!
-    parseOnnxModel(model_path_head, 1U<<31, engine_head,context_head);
+    // parseOnnxModel(model_path_head, 1U<<31, engine_head,context_head);
 #endif
 }
 
@@ -376,8 +380,8 @@ std::vector<vector<float>> stmtracker::xyxy2cxywh(float * box)
 }
 
 void stmtracker::gen_engine_from_onnx() {
-    saveEngineFile("/home/user/data/backbone_q.onnx","/home/user/data/backbone_q.engine");
-    saveEngineFile("/home/user/data/memorize.onnx","/home/user/data/memorize.engine");
-    saveEngineFile("/home/user/data/head.onnx","/home/user/data/head.engine");
+    // saveEngineFile("../../eff-onnx/backbone_q.onnx","../../eff-onnx/backbone_q.engine");
+    // saveEngineFile("../../eff-onnx/memorize.onnx","../../eff-onnx/memorize.engine");
+    saveEngineFile("../../eff-onnx/head.onnx","../../eff-onnx/head.engine");
     return;
 }
